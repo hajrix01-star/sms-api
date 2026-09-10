@@ -75,6 +75,53 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         }
     }
 
+    /** Indexed, bounded read for the operations screen. Nothing is kept in memory outside the visible list. */
+    fun events(
+        limit: Int = 200,
+        days: Int? = null,
+        sender: String? = null,
+        category: String? = null,
+        search: String? = null,
+    ): List<LedgerEvent> {
+        val filters = mutableListOf<String>()
+        val args = mutableListOf<String>()
+        if (days != null) {
+            filters += "received_at >= ?"
+            args += (System.currentTimeMillis() - days * 86_400_000L).toString()
+        }
+        sender?.let { filters += "sender = ?"; args += it }
+        category?.let { filters += "category = ?"; args += it }
+        search?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
+            filters += "(body LIKE ? OR counterparty LIKE ? OR instrument LIKE ?)"
+            repeat(3) { args += "%$value%" }
+        }
+        return readableDatabase.query(
+            "events",
+            arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body"),
+            filters.takeIf { it.isNotEmpty() }?.joinToString(" AND "),
+            args.takeIf { it.isNotEmpty() }?.toTypedArray(),
+            null, null, "received_at DESC", limit.toString(),
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(
+                    LedgerEvent(
+                        sender = cursor.getString(0), receivedAt = cursor.getLong(1), category = cursor.getString(2),
+                        amount = if (cursor.isNull(3)) null else cursor.getDouble(3),
+                        instrument = cursor.getString(4), counterparty = cursor.getString(5), body = cursor.getString(6),
+                    )
+                )
+            }
+        }
+    }
+
+    fun sendersWithEvents(): List<String> = readableDatabase.rawQuery(
+        "SELECT sender FROM events GROUP BY sender ORDER BY MAX(received_at) DESC", null,
+    ).use { cursor -> buildList { while (cursor.moveToNext()) add(cursor.getString(0)) } }
+
+    fun categoriesWithEvents(): List<String> = readableDatabase.rawQuery(
+        "SELECT category FROM events GROUP BY category ORDER BY COUNT(*) DESC", null,
+    ).use { cursor -> buildList { while (cursor.moveToNext()) add(cursor.getString(0)) } }
+
     fun summary(): LedgerSummary {
         val counts = mutableMapOf<String, Int>()
         readableDatabase.rawQuery("SELECT category, COUNT(*) FROM events GROUP BY category", null).use { cursor ->

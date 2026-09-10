@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -18,10 +20,11 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -49,10 +52,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var instrumentDirectory: TextView
     private lateinit var dashboardStatus: TextView
     private lateinit var dashboardSummary: TextView
-    private lateinit var operationsList: TextView
+    private lateinit var operationsAdapter: OperationsAdapter
+    private lateinit var operationFilterSummary: TextView
+    private lateinit var operationsEmpty: TextView
+    private lateinit var operationBankChips: ChipGroup
+    private lateinit var operationCategoryChips: ChipGroup
+    private lateinit var operationSearch: EditText
     private lateinit var accountsOverview: TextView
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
+    private var operationDays: Int? = null
+    private var operationSender: String? = null
+    private var operationCategory: String? = null
 
     override fun attachBaseContext(newBase: Context) {
         val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
@@ -80,8 +91,13 @@ class MainActivity : AppCompatActivity() {
         instrumentDirectory = findViewById(R.id.instrumentDirectory)
         dashboardStatus = findViewById(R.id.dashboardStatus)
         dashboardSummary = findViewById(R.id.dashboardSummary)
-        operationsList = findViewById(R.id.operationsList)
+        operationFilterSummary = findViewById(R.id.operationsFilterSummary)
+        operationsEmpty = findViewById(R.id.operationsEmpty)
+        operationBankChips = findViewById(R.id.operationBankChips)
+        operationCategoryChips = findViewById(R.id.operationCategoryChips)
+        operationSearch = findViewById(R.id.operationSearch)
         accountsOverview = findViewById(R.id.accountsOverview)
+        setupOperations()
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -173,7 +189,7 @@ class MainActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
         val navigation = findViewById<NavigationView>(R.id.navigationView)
 
-        toolbar.setNavigationOnClickListener { drawer.openDrawer(GravityCompat.END) }
+        toolbar.setNavigationOnClickListener { drawer.openDrawer(android.view.Gravity.RIGHT) }
         navigation.setNavigationItemSelectedListener { item ->
             val page = when (item.itemId) {
                 R.id.menuDashboard -> R.id.dashboardPage
@@ -186,7 +202,7 @@ class MainActivity : AppCompatActivity() {
                 false
             } else {
                 showPage(page)
-                drawer.closeDrawer(GravityCompat.END)
+                drawer.closeDrawer(android.view.Gravity.RIGHT)
                 true
             }
         }
@@ -198,6 +214,78 @@ class MainActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(
                 if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO,
             )
+        }
+    }
+
+    private fun setupOperations() {
+        operationsAdapter = OperationsAdapter()
+        findViewById<RecyclerView>(R.id.operationsRecycler).apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = operationsAdapter
+            setHasFixedSize(true)
+        }
+        findViewById<Chip>(R.id.periodAll).setOnClickListener { operationDays = null; renderOperations() }
+        findViewById<Chip>(R.id.period7Days).setOnClickListener { operationDays = 7; renderOperations() }
+        findViewById<Chip>(R.id.period30Days).setOnClickListener { operationDays = 30; renderOperations() }
+        operationSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(value: Editable?) = renderOperations()
+        })
+    }
+
+    private fun renderOperations() {
+        val database = LedgerDatabase(this)
+        renderOperationChips(
+            operationBankChips,
+            "كل البنوك والمرسلين",
+            database.sendersWithEvents(),
+            operationSender,
+        ) { operationSender = it }
+        renderOperationChips(
+            operationCategoryChips,
+            "كل الأنواع",
+            database.categoriesWithEvents(),
+            operationCategory,
+        ) { operationCategory = it }
+        val events = database.events(
+            days = operationDays,
+            sender = operationSender,
+            category = operationCategory,
+            search = operationSearch.text?.toString(),
+        )
+        operationsAdapter.submit(events)
+        operationsEmpty.visibility = if (events.isEmpty()) View.VISIBLE else View.GONE
+        val window = when (operationDays) {
+            7 -> "آخر 7 أيام"
+            30 -> "آخر 30 يوم"
+            else -> "كل المدة"
+        }
+        operationFilterSummary.text = "عرض ${events.size} عملية · $window · الحد الأقصى 200"
+    }
+
+    private fun renderOperationChips(
+        group: ChipGroup,
+        allLabel: String,
+        values: List<String>,
+        selected: String?,
+        onSelect: (String?) -> Unit,
+    ) {
+        group.removeAllViews()
+        (listOf<String?>(null) + values).forEach { value ->
+            group.addView(Chip(this).apply {
+                text = value ?: allLabel
+                isCheckable = true
+                isChecked = value == selected
+                setOnClickListener {
+                    if (value == selected) {
+                        isChecked = true
+                    } else {
+                        onSelect(value)
+                        renderOperations()
+                    }
+                }
+            })
         }
     }
 
@@ -641,9 +729,7 @@ class MainActivity : AppCompatActivity() {
         val summary = RelayStore.summary(this)
         dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
         dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nغير مصنفة: ${summary.unknown}"
-        operationsList.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
-            "${receipt.outcome} · ${receipt.sender}\n${formatter.format(Date(receipt.receivedAt))}\n${receipt.preview}"
-        }.ifBlank { "لا توجد عمليات بعد. استورد الرسائل أو نفّذ فحص الآن." }
+        renderOperations()
         accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."
     }
 
