@@ -51,6 +51,9 @@ jobs:
         echo "SMS_API_KEY_ALIAS=$SMS_API_KEY_ALIAS" >> "$GITHUB_ENV"
         echo "SMS_API_KEY_PASSWORD=$SMS_API_KEY_PASSWORD" >> "$GITHUB_ENV"
 
+    - name: Run unit tests
+      run: ./gradlew testDebugUnitTest
+
     - name: Build signed APK
       if: github.event_name != 'pull_request'
       run: ./gradlew assembleRelease
