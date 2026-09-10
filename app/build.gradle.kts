@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.11.0-finance-navigation"
+        versionCode = 13
+        versionName = "0.11.1-top-navigation"
     }
 
     buildTypes {
