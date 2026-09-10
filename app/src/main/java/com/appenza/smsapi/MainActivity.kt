@@ -12,13 +12,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var chips: ChipGroup
     private lateinit var status: TextView
     private lateinit var input: EditText
-    private lateinit var url: EditText
-    private lateinit var token: EditText
+    private lateinit var history: TextView
     private val senders = mutableListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,12 +30,8 @@ class MainActivity : AppCompatActivity() {
         chips = findViewById(R.id.senderChips)
         status = findViewById(R.id.status)
         input = findViewById(R.id.senderInput)
-        url = findViewById(R.id.apiUrl)
-        token = findViewById(R.id.apiToken)
+        history = findViewById(R.id.receiptHistory)
         senders.addAll(RelayStore.senders(this))
-        url.setText(RelayStore.p(this).getString(RelayStore.URL, ""))
-        token.setText(RelayStore.token(this).orEmpty())
-        render()
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
             val sender = input.text.toString().trim()
@@ -43,26 +41,39 @@ class MainActivity : AppCompatActivity() {
                 render()
             }
         }
-        findViewById<Button>(R.id.enable).setOnClickListener { if (save()) requestSmsPermission() }
+        findViewById<Button>(R.id.enable).setOnClickListener { if (saveSenders()) requestSmsPermission() }
         findViewById<Button>(R.id.disable).setOnClickListener {
-            RelayStore.p(this).edit().putBoolean(RelayStore.ENABLED, false).apply()
+            RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, false).apply()
             render()
         }
         findViewById<Button>(R.id.test).setOnClickListener {
-            if (save()) RelayWorker.enqueue(this, "BANK_RELAY_TEST", "Bank Relay connection test", System.currentTimeMillis())
+            RelayStore.recordReceipt(
+                this,
+                "SMS_API_TEST",
+                "هذه رسالة اختبار محلية. لا يتم إرسال أي بيانات إلى الإنترنت.",
+                System.currentTimeMillis(),
+                "حدث اختبار محلي",
+            )
+            render()
         }
+        findViewById<Button>(R.id.clearHistory).setOnClickListener {
+            RelayStore.clearReceipts(this)
+            render()
+        }
+        render()
     }
 
-    private fun save(): Boolean {
-        val endpoint = url.text.toString().trim()
-        val deviceToken = token.text.toString()
-        if (senders.isEmpty() || !endpoint.startsWith("https://") || deviceToken.isBlank()) {
-            Toast.makeText(this, "أضف مرسلاً ورابط HTTPS ومفتاح الجهاز", Toast.LENGTH_LONG).show()
+    override fun onResume() {
+        super.onResume()
+        if (::status.isInitialized) render()
+    }
+
+    private fun saveSenders(): Boolean {
+        if (senders.isEmpty()) {
+            Toast.makeText(this, "أضف مرسلًا واحدًا على الأقل", Toast.LENGTH_LONG).show()
             return false
         }
         RelayStore.saveSenders(this, senders)
-        RelayStore.p(this).edit().putString(RelayStore.URL, endpoint).apply()
-        RelayStore.saveToken(this, deviceToken)
         return true
     }
 
@@ -76,11 +87,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, results)
-        if (requestCode == REQUEST_SMS && results.all { it == PackageManager.PERMISSION_GRANTED }) enable()
+        if (requestCode == REQUEST_SMS && results.all { it == PackageManager.PERMISSION_GRANTED }) {
+            enable()
+        } else if (requestCode == REQUEST_SMS) {
+            Toast.makeText(this, "لن يعمل سجل الاستلام بدون إذن SMS", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun enable() {
-        RelayStore.p(this).edit().putBoolean(RelayStore.ENABLED, true).apply()
+        RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, true).apply()
         render()
     }
 
@@ -93,11 +108,17 @@ class MainActivity : AppCompatActivity() {
                 setOnCloseIconClickListener { senders.remove(sender); render() }
             })
         }
-        status.text = if (RelayStore.p(this).getBoolean(RelayStore.ENABLED, false)) {
-            "الحالة: التحويل مفعّل"
-        } else {
-            "الحالة: غير مفعّل"
+        val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        val isEnabled = RelayStore.preferences(this).getBoolean(RelayStore.ENABLED, false)
+        status.text = when {
+            isEnabled && hasPermission -> "الحالة: استقبال الرسائل مفعّل"
+            hasPermission -> "الحالة: الإذن مسموح، الاستقبال غير مفعّل"
+            else -> "الحالة: إذن SMS مطلوب للاختبار"
         }
+        val formatter = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale("ar"))
+        history.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
+            "${receipt.sender}  •  ${formatter.format(Date(receipt.receivedAt))}\n${receipt.outcome}\n${receipt.preview}"
+        }.ifBlank { "لا توجد رسائل مستلمة بعد. فعّل الاستقبال ثم أرسل SMS عادية من رقم مطابق." }
     }
 
     private companion object { const val REQUEST_SMS = 8 }

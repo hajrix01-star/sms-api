@@ -16,7 +16,6 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans"
             android:letterSpacing="0.04"
             android:text="SMS API"
             android:textColor="#F4EFF4"
@@ -47,7 +46,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="18dp"
-                android:text="الحالة: غير مفعّل"
+                android:text="الحالة: إذن SMS مطلوب للاختبار"
                 android:textColor="#E4F5EA"
                 android:textSize="17sp"
                 android:textStyle="bold" />
@@ -57,7 +56,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            android:text="مرسلو البنوك"
+            android:text="مرسلو الاختبار"
             android:textColor="#F4EFF4"
             android:textSize="19sp"
             android:textStyle="bold" />
@@ -66,7 +65,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="أضف اسم المرسل كما يظهر في SMS، مثل ALAHLI أو ALRAJHI."
+            android:text="أضف اسم المرسل كما يظهر في SMS، أو آخر 6–8 أرقام من جوال الاختبار."
             android:textColor="#CFC7D2"
             android:textSize="14sp" />
 
@@ -81,7 +80,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="اسم المرسل"
+                android:hint="اسم أو رقم المرسل"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="#68B497"
                 app:hintTextColor="#CFC7D2">
@@ -114,67 +113,47 @@
             app:chipSpacingHorizontal="8dp"
             app:chipSpacingVertical="8dp" />
 
-        <TextView
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            android:text="رابط Baseer API"
-            android:textColor="#F4EFF4"
-            android:textSize="19sp"
-            android:textStyle="bold" />
+            app:cardBackgroundColor="#1D1B24"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#3A3540"
+            app:strokeWidth="1dp">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:hint="https://baseer.example.com/api/v1/bank-sms"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="#68B497"
-            app:hintTextColor="#89818D">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/apiUrl"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textUri"
-                android:textColor="#F4EFF4"
-                android:textColorHint="#89818D"
-                android:textDirection="ltr" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:orientation="vertical"
+                android:padding="18dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="مفتاح ربط الجهاز"
-            android:textColor="#F4EFF4"
-            android:textSize="19sp"
-            android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="وضع الاختبار المحلي"
+                    android:textColor="#F4EFF4"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:hint="يصدر من بصير"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="#68B497"
-            app:hintTextColor="#89818D">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/apiToken"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPassword"
-                android:textColor="#F4EFF4"
-                android:textColorHint="#89818D" />
-        </com.google.android.material.textfield.TextInputLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="لا يوجد API ولا اتصال إنترنت في هذه النسخة. تستقبل فقط الرسائل الجديدة المطابقة وتعرضها على هذا الجوال."
+                    android:textColor="#CFC7D2"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/enable"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="28dp"
-            android:text="حفظ وتفعيل"
+            android:layout_marginTop="20dp"
+            android:text="تفعيل استقبال SMS للاختبار"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             app:backgroundTint="#16805D"
@@ -185,7 +164,7 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
-            android:text="إرسال رسالة اختبار"
+            android:text="إضافة حدث اختبار محلي"
             android:textColor="#DDF7EA"
             app:backgroundTint="#244A3C"
             app:cornerRadius="16dp"
@@ -197,20 +176,55 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
-            android:text="إيقاف التحويل"
+            android:text="إيقاف الاستقبال"
             android:textColor="#F6D9DB"
             app:backgroundTint="#392426"
             app:cornerRadius="16dp"
             app:strokeColor="#8D5157"
             app:strokeWidth="1dp" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="سجل الاستلام"
+                android:textColor="#F4EFF4"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="مسح السجل"
+                android:textColor="#CFC7D2"
+                app:backgroundTint="#27232D"
+                app:cornerRadius="14dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/receiptHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:padding="16dp"
+            android:textColor="#E4DEE7"
+            android:textSize="14sp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="20dp"
             android:layout_marginBottom="12dp"
             android:lineSpacingExtra="4dp"
-            android:text="لا يقرأ التطبيق سجل الرسائل القديم ولا يفتح واتساب. رسائل رموز التحقق مستبعدة."
+            android:text="يحفظ التطبيق آخر 20 سجلًا على هذا الجوال فقط. محتوى رموز التحقق يُخفى تلقائيًا ولا يقرأ التطبيق الرسائل القديمة."
             android:textColor="#B8B0BC"
             android:textSize="14sp" />
     </LinearLayout>

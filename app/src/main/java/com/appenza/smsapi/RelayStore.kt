@@ -1,48 +1,65 @@
 package com.appenza.smsapi
 
 import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Base64
 import org.json.JSONArray
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
+import org.json.JSONObject
+
+data class Receipt(
+    val sender: String,
+    val receivedAt: Long,
+    val outcome: String,
+    val preview: String,
+)
 
 object RelayStore {
-    const val URL = "url"
     const val ENABLED = "enabled"
     const val SENDERS = "senders"
-    private const val ENCRYPTED_TOKEN = "encrypted_token"
-    private const val KEY_ALIAS = "bank_relay_api_token"
+    private const val RECEIPTS = "receipts"
+    private const val MAX_RECEIPTS = 20
 
-    fun p(context: Context) = context.getSharedPreferences("bank_relay", Context.MODE_PRIVATE)
+    fun preferences(context: Context) = context.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
 
     fun senders(context: Context): List<String> {
-        val values = JSONArray(p(context).getString(SENDERS, "[]") ?: "[]")
+        val values = JSONArray(preferences(context).getString(SENDERS, "[]") ?: "[]")
         return (0 until values.length()).map { values.getString(it) }
     }
 
     fun saveSenders(context: Context, values: List<String>) {
-        p(context).edit().putString(SENDERS, JSONArray(values).toString()).apply()
+        preferences(context).edit().putString(SENDERS, JSONArray(values).toString()).apply()
     }
 
-    fun saveToken(context: Context, value: String) {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, deviceKey())
-        val encrypted = Base64.encodeToString(cipher.doFinal(value.toByteArray()), Base64.NO_WRAP)
-        val iv = Base64.encodeToString(cipher.iv, Base64.NO_WRAP)
-        p(context).edit().putString(ENCRYPTED_TOKEN, "$iv:$encrypted").apply()
+    fun recordReceipt(context: Context, sender: String, body: String, receivedAt: Long, outcome: String) {
+        val stored = JSONArray()
+        stored.put(
+            JSONObject()
+                .put("sender", sender)
+                .put("receivedAt", receivedAt)
+                .put("outcome", outcome)
+                .put("preview", preview(body)),
+        )
+        receiptsJson(context).let { current ->
+            for (index in 0 until minOf(current.length(), MAX_RECEIPTS - 1)) stored.put(current.getJSONObject(index))
+        }
+        preferences(context).edit().putString(RECEIPTS, stored.toString()).apply()
     }
 
-    fun token(context: Context): String? = runCatching {
-        val parts = p(context).getString(ENCRYPTED_TOKEN, null)?.split(":") ?: return null
-        if (parts.size != 2) return null
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, deviceKey(), javax.crypto.spec.GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)))
-        String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)))
-    }.getOrNull()
+    fun receipts(context: Context): List<Receipt> = runCatching {
+        val values = receiptsJson(context)
+        (0 until values.length()).map { index ->
+            values.getJSONObject(index).let {
+                Receipt(
+                    sender = it.getString("sender"),
+                    receivedAt = it.getLong("receivedAt"),
+                    outcome = it.getString("outcome"),
+                    preview = it.getString("preview"),
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    fun clearReceipts(context: Context) {
+        preferences(context).edit().remove(RECEIPTS).apply()
+    }
 
     fun isOtp(value: String): Boolean {
         val text = value.lowercase()
@@ -50,18 +67,10 @@ object RelayStore {
             .any(text::contains)
     }
 
-    private fun deviceKey(): SecretKey {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
-        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
-            init(
-                KeyGenParameterSpec.Builder(
-                    KEY_ALIAS,
-                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-                ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .build(),
-            )
-        }.generateKey()
+    private fun receiptsJson(context: Context) = JSONArray(preferences(context).getString(RECEIPTS, "[]") ?: "[]")
+
+    private fun preview(value: String): String {
+        val normalized = value.replace(Regex("\\s+"), " ").trim()
+        return if (normalized.length <= 120) normalized else "${normalized.take(120)}…"
     }
 }

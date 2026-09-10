@@ -1,53 +1,28 @@
 # SMS API
 
-Android application for receiving **new** SMS messages from selected bank senders and forwarding them to one configurable HTTPS API endpoint.
+تطبيق Android صغير لاختبار استقبال رسائل SMS الجديدة من مرسلين تختارهم.
 
-## What it does
+## إصدار الاختبار المحلي 0.2
 
-- Receives only new incoming SMS after you enable it.
-- Filters messages by sender names you enter in the app.
-- Excludes common OTP and verification-code messages.
-- Sends each selected message to the HTTPS endpoint with a unique event ID.
-- Queues delivery until the network is available and retries temporary server failures.
-- Stores the device API token encrypted using Android Keystore.
+- لا يوجد API أو Webhook أو اتصال إنترنت.
+- لا يرسل التطبيق أي رسالة أو بيانات خارج الجوال.
+- يلتقط فقط الرسائل الجديدة بعد التفعيل، ومن المرسلين المطابقين لما أضفته.
+- يعرض سجلًا محليًا لآخر 20 رسالة مطابقة لتأكيد أن إذن SMS والاستقبال يعملان.
+- يخفي محتوى رسائل رموز التحقق تلقائيًا.
 
-## What it does not do
+## خطوات الاختبار
 
-- It does not read old SMS inbox messages.
-- It does not open or control WhatsApp, Telegram, Accessibility, overlays, or a foreground service.
-- It does not send OTP messages.
+1. أضف اسم أو رقم جوال مرسل الاختبار كما سيظهر في الرسالة.
+2. اضغط **تفعيل استقبال SMS للاختبار** واسمح بإذن الرسائل عندما يطلبه Android.
+3. أرسل رسالة عادية من الجوال الآخر إلى هذا الجوال.
+4. افتح التطبيق وتحقق من ظهورها في **سجل الاستلام**.
 
-## API contract
+لا يقرأ التطبيق الرسائل القديمة ولا يتعامل مع واتساب أو تيليجرام أو خدمات إمكانية الوصول.
 
-The app sends an HTTPS `POST` request to the URL configured in the app.
+## الإذن المطلوب
 
-```text
-Content-Type: application/json
-Authorization: Bearer <device-token>
-```
-
-```json
-{
-  "event_id": "sha256-unique-event-id",
-  "sender": "ALRAJHI",
-  "body": "Bank message text",
-  "received_at": 1735689600000
-}
-```
-
-The API should treat `event_id` as an idempotency key and return a `2xx` response only after it accepts the message.
-
-## Setup
-
-1. Install the APK on the Android phone.
-2. Add the exact sender labels used by your bank.
-3. Enter the HTTPS Baseer Relay API URL and the device token.
-4. Tap **Save and enable**, then allow SMS reception when Android asks.
-5. Use **Send test message** after the API is ready.
-
-## Permissions
-
-| Permission | Reason |
+| الإذن | السبب |
 | --- | --- |
-| `RECEIVE_SMS` | Receive new incoming bank SMS for the senders you select. |
-| `INTERNET` | Send selected messages to the configured HTTPS API. |
+| `RECEIVE_SMS` | استقبال رسائل SMS الجديدة المطابقة للمرسلين الذين تحددهم. |
+
+بعد نجاح هذا الاختبار نضيف ربطًا آمنًا مع Baseer Relay API، ثم يقوم الخادم بإرسالها إلى Odoo أو Telegram.
