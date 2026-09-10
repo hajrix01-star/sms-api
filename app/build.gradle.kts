@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-import"
+        versionCode = 4
+        versionName = "0.4.0-calendar"
     }
 
     buildTypes {

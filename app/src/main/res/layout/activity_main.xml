@@ -180,7 +180,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="تاريخ النهاية: 2026-09-10"
+            android:hint="اختر تاريخ النهاية من التقويم"
             app:boxBackgroundMode="outline"
             app:boxStrokeColor="#68B497"
             app:hintTextColor="#CFC7D2">
@@ -189,7 +189,9 @@
                 android:id="@+id/importUntil"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
+                android:clickable="true"
+                android:focusable="false"
+                android:inputType="none"
                 android:textColor="#F4EFF4"
                 android:textColorHint="#89818D"
                 android:textDirection="ltr" />

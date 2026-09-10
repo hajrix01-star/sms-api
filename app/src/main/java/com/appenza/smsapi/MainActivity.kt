@@ -1,6 +1,7 @@
 package com.appenza.smsapi
 
 import android.Manifest
+import android.app.DatePickerDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
@@ -49,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.enable).setOnClickListener { if (saveSenders()) requestReceiveSmsPermission() }
         findViewById<Button>(R.id.importHistory).setOnClickListener { if (saveSenders()) requestReadSmsPermission() }
+        importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, false).apply()
             render()
@@ -117,20 +119,21 @@ class MainActivity : AppCompatActivity() {
     private fun importHistory() {
         val until = parseEndDate(importUntil.text.toString().trim())
         if (until == null) {
-            Toast.makeText(this, "اكتب تاريخ النهاية بصيغة 2026-09-10", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "اختر تاريخ النهاية من التقويم", Toast.LENGTH_LONG).show()
             return
         }
         val allowedSenders = RelayStore.senders(this)
         Thread {
             val result = runCatching {
                 val matches = mutableListOf<HistoricalMessage>()
-                contentResolver.query(
+                val cursor = contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
                     "${Telephony.Sms.DATE} <= ?",
                     arrayOf(until.toString()),
                     "${Telephony.Sms.DATE} DESC",
-                )?.use { cursor ->
+                ) ?: throw IllegalStateException("تعذر فتح سجل الرسائل")
+                cursor.use {
                     val addressColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
                     val bodyColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
                     val dateColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
@@ -153,7 +156,12 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 result.onSuccess { imported ->
                     render()
-                    Toast.makeText(this, "تم استيراد $imported رسالة مطابقة", Toast.LENGTH_LONG).show()
+                    val message = if (imported == 0) {
+                        "لم يتم العثور على رسائل مطابقة قبل هذا التاريخ"
+                    } else {
+                        "تم استيراد $imported رسالة مطابقة"
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }.onFailure {
                     Toast.makeText(this, "تعذر استيراد الرسائل: ${it.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
                 }
@@ -173,6 +181,20 @@ class MainActivity : AppCompatActivity() {
                 set(Calendar.MILLISECOND, 999)
             }.timeInMillis
         }.getOrNull()
+    }
+
+    private fun showDatePicker() {
+        val calendar = Calendar.getInstance()
+        parseEndDate(importUntil.text.toString().trim())?.let { calendar.timeInMillis = it }
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                importUntil.setText(String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, day))
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH),
+        ).show()
     }
 
     private fun render() {
