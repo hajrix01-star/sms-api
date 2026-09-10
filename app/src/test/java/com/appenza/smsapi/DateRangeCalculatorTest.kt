@@ -48,6 +48,29 @@ class DateRangeCalculatorTest {
         )
     }
 
+    @Test
+    fun todayAndYesterdayCoverExactlyOneCalendarDay() {
+        val now = millis(2026, Calendar.MARCH, 15, 18, 45, 12, 321)
+
+        val today = DateRangeCalculator.calendarDayWindow(0, now, riyadh)
+        val yesterday = DateRangeCalculator.calendarDayWindow(-1, now, riyadh)
+
+        assertEquals(millis(2026, Calendar.MARCH, 15, 0, 0, 0, 0), today.first)
+        assertEquals(millis(2026, Calendar.MARCH, 15, 23, 59, 59, 999), today.second)
+        assertEquals(millis(2026, Calendar.MARCH, 14, 0, 0, 0, 0), yesterday.first)
+        assertEquals(millis(2026, Calendar.MARCH, 14, 23, 59, 59, 999), yesterday.second)
+    }
+
+    @Test
+    fun sameCalendarDayIgnoresTheTimeOfDay() {
+        val morning = millis(2026, Calendar.MARCH, 15, 0, 0, 0, 0)
+        val evening = millis(2026, Calendar.MARCH, 15, 23, 59, 59, 999)
+        val nextDay = millis(2026, Calendar.MARCH, 16, 0, 0, 0, 0)
+
+        assertEquals(true, DateRangeCalculator.isSameCalendarDay(morning, evening, riyadh))
+        assertEquals(false, DateRangeCalculator.isSameCalendarDay(morning, nextDay, riyadh))
+    }
+
     private fun millis(
         year: Int,
         month: Int,

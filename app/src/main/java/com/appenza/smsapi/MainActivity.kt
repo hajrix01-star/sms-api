@@ -281,42 +281,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupDashboard() {
-        findViewById<Chip>(R.id.dashboardPeriodAll).setOnClickListener {
-            dashboardDays = null
-            dashboardFromMillis = null
-            dashboardToMillis = null
-            dashboardMonthFilter = null
-            render()
-        }
-        findViewById<Chip>(R.id.dashboardPeriod7Days).setOnClickListener {
-            dashboardDays = 7
-            dashboardFromMillis = null
-            dashboardToMillis = null
-            dashboardMonthFilter = null
-            render()
-        }
-        findViewById<Chip>(R.id.dashboardPeriod30Days).setOnClickListener {
-            dashboardDays = 30
-            dashboardFromMillis = null
-            dashboardToMillis = null
-            dashboardMonthFilter = null
-            render()
-        }
-        findViewById<Chip>(R.id.dashboardPeriodThisMonth).setOnClickListener {
-            dashboardDays = null
-            dashboardFromMillis = null
-            dashboardToMillis = null
-            dashboardMonthFilter = CalendarMonthFilter.THIS_MONTH
-            render()
-        }
-        findViewById<Chip>(R.id.dashboardPeriodLastMonth).setOnClickListener {
-            dashboardDays = null
-            dashboardFromMillis = null
-            dashboardToMillis = null
-            dashboardMonthFilter = CalendarMonthFilter.LAST_MONTH
-            render()
-        }
-        findViewById<Chip>(R.id.dashboardPeriodCustom).setOnClickListener { showDashboardDateRangePicker() }
+        findViewById<View>(R.id.dashboardPeriodCard).setOnClickListener { showDashboardPeriodSheet() }
+        findViewById<Button>(R.id.dashboardPeriodPickerButton).setOnClickListener { showDashboardPeriodSheet() }
 
         findViewById<View>(R.id.cardArz).setOnClickListener { openDashboardLedger("شركة أرز") }
         findViewById<View>(R.id.cardMuallam).setOnClickListener { openDashboardLedger("شركة المعلم الشامي") }
@@ -366,6 +332,89 @@ class MainActivity : AppCompatActivity() {
     private fun calendarMonthWindow(filter: CalendarMonthFilter): Pair<Long, Long> =
         DateRangeCalculator.calendarMonthWindow(filter)
 
+    private fun selectDashboardPeriod(
+        days: Int? = null,
+        month: CalendarMonthFilter? = null,
+        window: Pair<Long, Long>? = null,
+    ) {
+        dashboardDays = days
+        dashboardFromMillis = window?.first
+        dashboardToMillis = window?.second
+        dashboardMonthFilter = month
+        render()
+    }
+
+    private fun showDashboardPeriodSheet() {
+        val sheet = BottomSheetDialog(this)
+        val content = layoutInflater.inflate(R.layout.sheet_dashboard_period, null)
+        sheet.setContentView(content)
+
+        val currentWindow = dashboardWindow()
+        val today = DateRangeCalculator.calendarDayWindow()
+        val yesterday = DateRangeCalculator.calendarDayWindow(dayOffset = -1)
+        content.findViewById<TextView>(R.id.sheetDashboardPeriodLabel).text =
+            "المحدد حاليًا: ${formatPeriod(currentWindow.first, currentWindow.second)}"
+
+        fun choose(days: Int? = null, month: CalendarMonthFilter? = null, window: Pair<Long, Long>? = null) {
+            selectDashboardPeriod(days = days, month = month, window = window)
+            sheet.dismiss()
+        }
+
+        content.findViewById<Chip>(R.id.sheetDashboardPeriodAll).apply {
+            isChecked = dashboardDays == null && dashboardFromMillis == null && dashboardMonthFilter == null
+            setOnClickListener { choose() }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriodToday).apply {
+            isChecked = dashboardFromMillis == today.first && dashboardToMillis == today.second
+            setOnClickListener { choose(window = today) }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriodYesterday).apply {
+            isChecked = dashboardFromMillis == yesterday.first && dashboardToMillis == yesterday.second
+            setOnClickListener { choose(window = yesterday) }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriodThisMonth).apply {
+            isChecked = dashboardMonthFilter == CalendarMonthFilter.THIS_MONTH
+            setOnClickListener { choose(month = CalendarMonthFilter.THIS_MONTH) }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriodLastMonth).apply {
+            isChecked = dashboardMonthFilter == CalendarMonthFilter.LAST_MONTH
+            setOnClickListener { choose(month = CalendarMonthFilter.LAST_MONTH) }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriod7Days).apply {
+            isChecked = dashboardDays == 7
+            setOnClickListener { choose(days = 7) }
+        }
+        content.findViewById<Chip>(R.id.sheetDashboardPeriod30Days).apply {
+            isChecked = dashboardDays == 30
+            setOnClickListener { choose(days = 30) }
+        }
+        content.findViewById<Button>(R.id.sheetDashboardSingleDay).setOnClickListener {
+            sheet.dismiss()
+            showDashboardSingleDatePicker()
+        }
+        content.findViewById<Button>(R.id.sheetDashboardDateRange).setOnClickListener {
+            sheet.dismiss()
+            showDashboardDateRangePicker()
+        }
+        sheet.show()
+    }
+
+    private fun showDashboardSingleDatePicker() {
+        val calendar = Calendar.getInstance().apply {
+            dashboardFromMillis?.let { timeInMillis = it }
+        }
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                selectDashboardPeriod(
+                    window = dayBoundary(year, month, day, endOfDay = false) to
+                        dayBoundary(year, month, day, endOfDay = true),
+                )
+            },
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH),
+        ).show()
+    }
+
     private fun showDashboardDateRangePicker() {
         val calendar = Calendar.getInstance()
         dashboardFromMillis?.let { calendar.timeInMillis = it }
@@ -382,11 +431,7 @@ class MainActivity : AppCompatActivity() {
                             Toast.makeText(this, "تاريخ النهاية يجب أن يكون بعد تاريخ البداية", Toast.LENGTH_LONG).show()
                             render()
                         } else {
-                            dashboardDays = null
-                            dashboardFromMillis = from
-                            dashboardToMillis = to
-                            dashboardMonthFilter = null
-                            render()
+                            selectDashboardPeriod(window = from to to)
                         }
                     },
                     endCalendar.get(Calendar.YEAR), endCalendar.get(Calendar.MONTH), endCalendar.get(Calendar.DAY_OF_MONTH),
@@ -402,7 +447,11 @@ class MainActivity : AppCompatActivity() {
     private fun formatPeriod(fromMillis: Long?, toMillis: Long?): String {
         if (fromMillis == null) return "كل السجل"
         val formatter = SimpleDateFormat("dd MMM yyyy", Locale("ar"))
-        return if (toMillis == null) "من ${formatter.format(Date(fromMillis))}" else "${formatter.format(Date(fromMillis))} – ${formatter.format(Date(toMillis))}"
+        return when {
+            toMillis == null -> "من ${formatter.format(Date(fromMillis))}"
+            DateRangeCalculator.isSameCalendarDay(fromMillis, toMillis) -> formatter.format(Date(fromMillis))
+            else -> "${formatter.format(Date(fromMillis))} – ${formatter.format(Date(toMillis))}"
+        }
     }
 
     private fun renderOperations() {
@@ -1107,12 +1156,6 @@ class MainActivity : AppCompatActivity() {
         val reviewCount = database.reviewCount()
         val (dashboardFrom, dashboardTo) = dashboardWindow()
         dashboardPeriodLabel.text = formatPeriod(dashboardFrom, dashboardTo)
-        findViewById<Chip>(R.id.dashboardPeriodAll).isChecked = dashboardDays == null && dashboardFrom == null && dashboardMonthFilter == null
-        findViewById<Chip>(R.id.dashboardPeriod7Days).isChecked = dashboardDays == 7
-        findViewById<Chip>(R.id.dashboardPeriod30Days).isChecked = dashboardDays == 30
-        findViewById<Chip>(R.id.dashboardPeriodThisMonth).isChecked = dashboardMonthFilter == CalendarMonthFilter.THIS_MONTH
-        findViewById<Chip>(R.id.dashboardPeriodLastMonth).isChecked = dashboardMonthFilter == CalendarMonthFilter.LAST_MONTH
-        findViewById<Chip>(R.id.dashboardPeriodCustom).isChecked = dashboardFromMillis != null
         renderFlow(arzFlowText, database.financialFlow("شركة أرز", dashboardFrom, dashboardTo))
         renderFlow(muallamFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo))
         renderFlow(dohaFlowText, database.financialFlow("مؤسسة دوحة المستهلك التجارية", dashboardFrom, dashboardTo))
