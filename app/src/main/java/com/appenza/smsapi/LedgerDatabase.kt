@@ -19,6 +19,12 @@ data class LedgerEvent(
 )
 
 data class LedgerSummary(val total: Int, val incoming: Int, val outgoing: Int, val fees: Int, val unknown: Int)
+data class FinancialFlowSummary(
+    val transactions: Int,
+    val incoming: Double,
+    val outgoing: Double,
+    val fees: Double,
+)
 data class Company(val id: Long, val name: String)
 data class FinancialInstrument(val reference: String, val bankSender: String, val kind: String, val companyName: String?, val role: String?, val parentReference: String?, val events: Int)
 data class CustodySummary(
@@ -176,18 +182,26 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
     fun events(
         limit: Int = 200,
         days: Int? = null,
+        fromMillis: Long? = null,
+        toMillis: Long? = null,
         sender: String? = null,
         category: String? = null,
         companyName: String? = null,
         search: String? = null,
+        bodyKeywords: List<String> = emptyList(),
         reviewOnly: Boolean = false,
+        custodyOnly: Boolean = false,
     ): List<LedgerEvent> {
         val filters = mutableListOf<String>()
         val args = mutableListOf<String>()
-        if (days != null) {
+        if (fromMillis != null) {
+            filters += "received_at >= ?"
+            args += fromMillis.toString()
+        } else if (days != null) {
             filters += "received_at >= ?"
             args += (System.currentTimeMillis() - days * 86_400_000L).toString()
         }
+        toMillis?.let { filters += "received_at <= ?"; args += it.toString() }
         sender?.let { filters += "sender = ?"; args += it }
         category?.let { filters += "category = ?"; args += it }
         companyName?.let { filters += "company_name = ?"; args += it }
@@ -195,9 +209,14 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
             filters += "(category = ? OR company_name IS NULL)"
             args += "غير مصنف"
         }
+        if (custodyOnly) filters += "custody_type IS NOT NULL"
         search?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
             filters += "(body LIKE ? OR counterparty LIKE ? OR instrument LIKE ?)"
             repeat(3) { args += "%$value%" }
+        }
+        if (bodyKeywords.isNotEmpty()) {
+            filters += bodyKeywords.joinToString(prefix = "(", postfix = ")", separator = " OR ") { "body LIKE ?" }
+            bodyKeywords.forEach { args += "%$it%" }
         }
         return readableDatabase.query(
             "events",
@@ -246,20 +265,68 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         )
     }
 
+    /**
+     * Financial view used by the dashboard. Aggregation stays in SQLite so the
+     * dashboard does not load the full SMS ledger into memory.
+     */
+    fun financialFlow(
+        companyName: String,
+        fromMillis: Long? = null,
+        toMillis: Long? = null,
+        bodyKeywords: List<String> = emptyList(),
+    ): FinancialFlowSummary {
+        val filters = mutableListOf("company_name = ?")
+        val args = mutableListOf(companyName)
+        fromMillis?.let { filters += "received_at >= ?"; args += it.toString() }
+        toMillis?.let { filters += "received_at <= ?"; args += it.toString() }
+        if (bodyKeywords.isNotEmpty()) {
+            filters += bodyKeywords.joinToString(prefix = "(", postfix = ")", separator = " OR ") { "body LIKE ?" }
+            bodyKeywords.forEach { args += "%$it%" }
+        }
+
+        var count = 0
+        var incoming = 0.0
+        var outgoing = 0.0
+        var fees = 0.0
+        readableDatabase.rawQuery(
+            "SELECT category, COUNT(*), COALESCE(SUM(amount), 0) FROM events WHERE ${filters.joinToString(" AND ")} GROUP BY category",
+            args.toTypedArray(),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val category = cursor.getString(0)
+                val categoryCount = cursor.getInt(1)
+                val amount = cursor.getDouble(2)
+                count += categoryCount
+                when (category) {
+                    "إيداع / وارد", "تسوية POS" -> incoming += amount
+                    "رسوم بنكية" -> fees += amount
+                    "شراء", "تحويل صادر", "تحويل داخلي", "سحب صراف", "سداد" -> outgoing += amount
+                }
+            }
+        }
+        return FinancialFlowSummary(count, incoming, outgoing, fees)
+    }
+
     /** SQL aggregation keeps the shared-custody statement lightweight even with a large ledger. */
-    fun osamaCustodySummary(): CustodySummary {
+    fun osamaCustodySummary(fromMillis: Long? = null, toMillis: Long? = null): CustodySummary {
+        val periodFilters = mutableListOf("custody_type IS NOT NULL")
+        val periodArgs = mutableListOf<String>()
+        fromMillis?.let { periodFilters += "received_at >= ?"; periodArgs += it.toString() }
+        toMillis?.let { periodFilters += "received_at <= ?"; periodArgs += it.toString() }
         val amounts = mutableMapOf<String, Double>()
         readableDatabase.rawQuery(
-            "SELECT custody_type, COALESCE(SUM(amount), 0) FROM events WHERE custody_type IS NOT NULL GROUP BY custody_type",
-            null,
+            "SELECT custody_type, COALESCE(SUM(amount), 0) FROM events WHERE ${periodFilters.joinToString(" AND ")} GROUP BY custody_type",
+            periodArgs.toTypedArray(),
         ).use { cursor ->
             while (cursor.moveToNext()) amounts[cursor.getString(0)] = cursor.getDouble(1)
         }
         val fundingByCompany = linkedMapOf<String, Double>()
+        val fundingFilters = periodFilters.toMutableList().apply { this[0] = "custody_type = ?" }
+        val fundingArgs = mutableListOf(CustodyType.FUNDING).apply { addAll(periodArgs) }
         readableDatabase.rawQuery("""
             SELECT COALESCE(company_name, 'مصدر غير مربوط'), COALESCE(SUM(amount), 0)
-            FROM events WHERE custody_type = ? GROUP BY company_name ORDER BY SUM(amount) DESC
-        """.trimIndent(), arrayOf(CustodyType.FUNDING)).use { cursor ->
+            FROM events WHERE ${fundingFilters.joinToString(" AND ")} GROUP BY company_name ORDER BY SUM(amount) DESC
+        """.trimIndent(), fundingArgs.toTypedArray()).use { cursor ->
             while (cursor.moveToNext()) fundingByCompany[cursor.getString(0)] = cursor.getDouble(1)
         }
         val funded = amounts[CustodyType.FUNDING] ?: 0.0

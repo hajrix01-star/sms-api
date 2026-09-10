@@ -35,58 +35,86 @@
 
         <ScrollView android:id="@+id/dashboardPage" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:layoutDirection="rtl">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="20dp" android:paddingTop="22dp" android:paddingEnd="20dp" android:paddingBottom="28dp">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="لوحة السجل المالي" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="لوحة الأداء المالي" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
                 <TextView android:id="@+id/dashboardStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_operation_badge" android:paddingStart="12dp" android:paddingTop="6dp" android:paddingEnd="12dp" android:paddingBottom="6dp" android:textColor="@color/text_accent" android:textSize="13sp" />
 
-                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" app:cardBackgroundColor="@color/primary_action" app:cardCornerRadius="22dp" app:cardElevation="0dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="إجمالي الحركات المسجلة" android:textColor="@color/on_primary" android:textSize="14sp" />
-                        <TextView android:id="@+id/dashboardTotalMetric" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/on_primary" android:textSize="34sp" android:textStyle="bold" />
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="بيانات محلية من رسائل البنوك المصرّح بها" android:textColor="@color/on_primary" android:textSize="13sp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/openOperations" android:layout_width="wrap_content" android:layout_height="44dp" android:layout_marginTop="16dp" android:minWidth="0dp" android:text="عرض دفتر العمليات" android:textColor="@color/text_accent" app:backgroundTint="@color/surface" app:cornerRadius="14dp" />
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="الفترة المالية" android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/dashboardPeriodLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/text_secondary" android:textSize="13sp" />
+                        <com.google.android.material.chip.ChipGroup android:id="@+id/dashboardPeriodChips" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" app:chipSpacingHorizontal="6dp" app:chipSpacingVertical="4dp" app:singleSelection="true">
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:checkable="true" android:text="كل السجل" />
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriod7Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="7 أيام" />
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriod30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="30 يوم" />
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodCustom" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="من تاريخ إلى تاريخ" />
+                        </com.google.android.material.chip.ChipGroup>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="مؤشرات اليوم" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_metric_success" android:orientation="vertical" android:padding="14dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="وارد وتسويات" android:textColor="@color/text_on_success" android:textSize="13sp" />
-                        <TextView android:id="@+id/dashboardIncomingMetric" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/text_on_success" android:textSize="24sp" android:textStyle="bold" />
-                    </LinearLayout>
-                    <Space android:layout_width="10dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_metric_neutral" android:orientation="vertical" android:padding="14dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مصروفات وحوالات" android:textColor="@color/text_secondary" android:textSize="13sp" />
-                        <TextView android:id="@+id/dashboardOutgoingMetric" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/text_primary" android:textSize="24sp" android:textStyle="bold" />
-                    </LinearLayout>
-                </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_metric_neutral" android:orientation="vertical" android:padding="14dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="رسوم بنكية" android:textColor="@color/text_secondary" android:textSize="13sp" />
-                        <TextView android:id="@+id/dashboardFeesMetric" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/text_primary" android:textSize="24sp" android:textStyle="bold" />
-                    </LinearLayout>
-                    <Space android:layout_width="10dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_metric_alert" android:orientation="vertical" android:padding="14dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="قيد المراجعة" android:textColor="@color/text_danger" android:textSize="13sp" />
-                        <TextView android:id="@+id/dashboardReviewMetric" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/text_danger" android:textSize="24sp" android:textStyle="bold" />
-                    </LinearLayout>
-                </LinearLayout>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="الشركات" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="اضغط على أي كرت لعرض العمليات المفصلة ضمن نفس الفترة." android:textColor="@color/text_secondary" android:textSize="13sp" />
 
-                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardArz" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مركز المراجعة" android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold" />
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="رسائل غير مكتملة الربط أو التصنيف؛ لا تُهمل ولا تُصدّر تلقائيًا." android:textColor="@color/text_secondary" android:textSize="13sp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/openReviewQueue" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="12dp" android:text="فتح قائمة المراجعة" android:textColor="@color/text_accent" app:backgroundTint="@color/surface_accent" app:cornerRadius="14dp" app:strokeColor="@color/accent" app:strokeWidth="1dp" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="شركة أرز" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="الحساب التشغيلي · مبيعات وسداد وفواتير وعهد" android:textColor="@color/text_secondary" android:textSize="13sp" />
+                        <TextView android:id="@+id/arzFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:textColor="@color/text_accent" android:textSize="15sp" android:lineSpacingExtra="5dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardMuallam" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="شركة المعلم الشامي" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="الحساب الرئيسي والفرعي · تشغيل وسداد وحوالات وعهد" android:textColor="@color/text_secondary" android:textSize="13sp" />
+                        <TextView android:id="@+id/muallamFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:textColor="@color/text_accent" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardDoha" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مؤسسة دوحة المستهلك التجارية" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="تشغيل إلكتروني · تحويلات وسداد ومدفوعات وتسويات" android:textColor="@color/text_secondary" android:textSize="13sp" />
+                        <TextView android:id="@+id/dohaFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:textColor="@color/text_accent" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="تحصيل تطبيقات المعلم الشامي" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="قنوات تحصيل تابعة للمعلم الشامي وليست شركات مستقلة." android:textColor="@color/text_secondary" android:textSize="13sp" />
+
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardKeeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/success_container" app:cardCornerRadius="18dp" app:cardElevation="0dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="كيتا" android:textColor="@color/text_on_success" android:textSize="17sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/keetaFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:textColor="@color/text_on_success" android:textSize="15sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardHunger" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/success_container" app:cardCornerRadius="18dp" app:cardElevation="0dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="هنقرستيشن" android:textColor="@color/text_on_success" android:textSize="17sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/hungerFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:textColor="@color/text_on_success" android:textSize="15sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardJahez" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/success_container" app:cardCornerRadius="18dp" app:cardElevation="0dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="جاهز" android:textColor="@color/text_on_success" android:textSize="17sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/jahezFlowText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:textColor="@color/text_on_success" android:textSize="15sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:id="@+id/cardOsamaCustody" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:clickable="true" android:focusable="true" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
                         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="عهدة أسامة — مندوب المشتريات" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" />
                         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="تمويل من أرز والمعلم الشامي، ومشتريات وسحب بطاقة 0187." android:textColor="@color/text_secondary" android:textSize="13sp" />
                         <TextView android:id="@+id/custodySummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/text_accent" android:textSize="15sp" android:lineSpacingExtra="6dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-                <TextView android:id="@+id/dashboardSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" />
+
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مركز المراجعة" android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="رسائل غير مكتملة الربط أو التصنيف؛ لا تُهمل ولا تُصدّر تلقائيًا." android:textColor="@color/text_secondary" android:textSize="13sp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/openReviewQueue" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="12dp" android:text="فتح قائمة المراجعة" android:textColor="@color/text_accent" app:backgroundTint="@color/surface_accent" app:cornerRadius="14dp" app:strokeColor="@color/accent" app:strokeWidth="1dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </ScrollView>
 

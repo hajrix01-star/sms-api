@@ -52,12 +52,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var companyDirectory: TextView
     private lateinit var instrumentDirectory: TextView
     private lateinit var dashboardStatus: TextView
-    private lateinit var dashboardSummary: TextView
-    private lateinit var dashboardTotalMetric: TextView
-    private lateinit var dashboardIncomingMetric: TextView
-    private lateinit var dashboardOutgoingMetric: TextView
-    private lateinit var dashboardFeesMetric: TextView
-    private lateinit var dashboardReviewMetric: TextView
+    private lateinit var dashboardPeriodLabel: TextView
+    private lateinit var arzFlowText: TextView
+    private lateinit var muallamFlowText: TextView
+    private lateinit var dohaFlowText: TextView
+    private lateinit var keetaFlowText: TextView
+    private lateinit var hungerFlowText: TextView
+    private lateinit var jahezFlowText: TextView
     private lateinit var custodySummary: TextView
     private lateinit var operationsAdapter: OperationsAdapter
     private lateinit var operationFilterSummary: TextView
@@ -77,7 +78,15 @@ class MainActivity : AppCompatActivity() {
     private var operationSender: String? = null
     private var operationCategory: String? = null
     private var operationReviewOnly = false
+    private var operationCustodyOnly = false
+    private var operationBodyKeywords = emptyList<String>()
+    private var operationScopeLabel: String? = null
     private var operationFiltersExpanded = false
+    private var operationFromMillis: Long? = null
+    private var operationToMillis: Long? = null
+    private var dashboardDays: Int? = null
+    private var dashboardFromMillis: Long? = null
+    private var dashboardToMillis: Long? = null
 
     override fun attachBaseContext(newBase: Context) {
         val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
@@ -104,12 +113,13 @@ class MainActivity : AppCompatActivity() {
         companyDirectory = findViewById(R.id.companyDirectory)
         instrumentDirectory = findViewById(R.id.instrumentDirectory)
         dashboardStatus = findViewById(R.id.dashboardStatus)
-        dashboardSummary = findViewById(R.id.dashboardSummary)
-        dashboardTotalMetric = findViewById(R.id.dashboardTotalMetric)
-        dashboardIncomingMetric = findViewById(R.id.dashboardIncomingMetric)
-        dashboardOutgoingMetric = findViewById(R.id.dashboardOutgoingMetric)
-        dashboardFeesMetric = findViewById(R.id.dashboardFeesMetric)
-        dashboardReviewMetric = findViewById(R.id.dashboardReviewMetric)
+        dashboardPeriodLabel = findViewById(R.id.dashboardPeriodLabel)
+        arzFlowText = findViewById(R.id.arzFlowText)
+        muallamFlowText = findViewById(R.id.muallamFlowText)
+        dohaFlowText = findViewById(R.id.dohaFlowText)
+        keetaFlowText = findViewById(R.id.keetaFlowText)
+        hungerFlowText = findViewById(R.id.hungerFlowText)
+        jahezFlowText = findViewById(R.id.jahezFlowText)
         custodySummary = findViewById(R.id.custodySummary)
         operationFilterSummary = findViewById(R.id.operationsFilterSummary)
         operationsEmpty = findViewById(R.id.operationsEmpty)
@@ -122,6 +132,7 @@ class MainActivity : AppCompatActivity() {
         accountsOverview = findViewById(R.id.accountsOverview)
         accountSuggestions = findViewById(R.id.accountSuggestions)
         setupOperations()
+        setupDashboard()
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -153,7 +164,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.addCompany).setOnClickListener { showAddCompanyDialog() }
         findViewById<Button>(R.id.manageInstruments).setOnClickListener { showInstrumentManager() }
         findViewById<Button>(R.id.openAccountManager).setOnClickListener { showInstrumentManager() }
-        findViewById<Button>(R.id.openOperations).setOnClickListener { showPage(R.id.operationsPage) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -249,9 +259,24 @@ class MainActivity : AppCompatActivity() {
             adapter = operationsAdapter
             setHasFixedSize(true)
         }
-        findViewById<Chip>(R.id.periodAll).setOnClickListener { operationDays = null; renderOperations() }
-        findViewById<Chip>(R.id.period7Days).setOnClickListener { operationDays = 7; renderOperations() }
-        findViewById<Chip>(R.id.period30Days).setOnClickListener { operationDays = 30; renderOperations() }
+        findViewById<Chip>(R.id.periodAll).setOnClickListener {
+            operationDays = null
+            operationFromMillis = null
+            operationToMillis = null
+            renderOperations()
+        }
+        findViewById<Chip>(R.id.period7Days).setOnClickListener {
+            operationDays = 7
+            operationFromMillis = null
+            operationToMillis = null
+            renderOperations()
+        }
+        findViewById<Chip>(R.id.period30Days).setOnClickListener {
+            operationDays = 30
+            operationFromMillis = null
+            operationToMillis = null
+            renderOperations()
+        }
         findViewById<Chip>(R.id.operationReviewChip).setOnClickListener { chip ->
             operationReviewOnly = (chip as Chip).isChecked
             renderOperations()
@@ -275,6 +300,108 @@ class MainActivity : AppCompatActivity() {
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(value: Editable?) = renderOperations()
         })
+    }
+
+    private fun setupDashboard() {
+        findViewById<Chip>(R.id.dashboardPeriodAll).setOnClickListener {
+            dashboardDays = null
+            dashboardFromMillis = null
+            dashboardToMillis = null
+            render()
+        }
+        findViewById<Chip>(R.id.dashboardPeriod7Days).setOnClickListener {
+            dashboardDays = 7
+            dashboardFromMillis = null
+            dashboardToMillis = null
+            render()
+        }
+        findViewById<Chip>(R.id.dashboardPeriod30Days).setOnClickListener {
+            dashboardDays = 30
+            dashboardFromMillis = null
+            dashboardToMillis = null
+            render()
+        }
+        findViewById<Chip>(R.id.dashboardPeriodCustom).setOnClickListener { showDashboardDateRangePicker() }
+
+        findViewById<View>(R.id.cardArz).setOnClickListener { openDashboardLedger("شركة أرز") }
+        findViewById<View>(R.id.cardMuallam).setOnClickListener { openDashboardLedger("شركة المعلم الشامي") }
+        findViewById<View>(R.id.cardDoha).setOnClickListener { openDashboardLedger("مؤسسة دوحة المستهلك التجارية") }
+        findViewById<View>(R.id.cardKeeta).setOnClickListener { openDashboardLedger("شركة المعلم الشامي", listOf("KEETA", "كيتا", "1310"), "تحصيل كيتا") }
+        findViewById<View>(R.id.cardHunger).setOnClickListener { openDashboardLedger("شركة المعلم الشامي", listOf("HUNGERSTATION", "HUNGER STATION", "HANQARSTISHN", "هنقرستيشن", "0605"), "تحصيل هنقرستيشن") }
+        findViewById<View>(R.id.cardJahez).setOnClickListener { openDashboardLedger("شركة المعلم الشامي", listOf("JAHEZ", "جاهز", "7507"), "تحصيل جاهز") }
+        findViewById<View>(R.id.cardOsamaCustody).setOnClickListener { openDashboardLedger(custodyOnly = true) }
+    }
+
+    private fun openDashboardLedger(
+        companyName: String? = null,
+        bodyKeywords: List<String> = emptyList(),
+        scopeLabel: String? = null,
+        custodyOnly: Boolean = false,
+    ) {
+        val (fromMillis, toMillis) = dashboardWindow()
+        operationCompany = companyName
+        operationSender = null
+        operationCategory = null
+        operationReviewOnly = false
+        operationCustodyOnly = custodyOnly
+        operationBodyKeywords = bodyKeywords
+        operationScopeLabel = scopeLabel
+        operationDays = null
+        operationFromMillis = fromMillis
+        operationToMillis = toMillis
+        operationSearch.setText("")
+        showPage(R.id.operationsPage)
+    }
+
+    private fun dashboardWindow(): Pair<Long?, Long?> = when {
+        dashboardFromMillis != null -> dashboardFromMillis to dashboardToMillis
+        dashboardDays != null -> (System.currentTimeMillis() - dashboardDays!! * 86_400_000L) to System.currentTimeMillis()
+        else -> null to null
+    }
+
+    private fun showDashboardDateRangePicker() {
+        val calendar = Calendar.getInstance()
+        dashboardFromMillis?.let { calendar.timeInMillis = it }
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val from = dayBoundary(year, month, day, endOfDay = false)
+                val endCalendar = Calendar.getInstance().apply { timeInMillis = dashboardToMillis ?: from }
+                DatePickerDialog(
+                    this,
+                    { _, endYear, endMonth, endDay ->
+                        val to = dayBoundary(endYear, endMonth, endDay, endOfDay = true)
+                        if (to < from) {
+                            Toast.makeText(this, "تاريخ النهاية يجب أن يكون بعد تاريخ البداية", Toast.LENGTH_LONG).show()
+                            render()
+                        } else {
+                            dashboardDays = null
+                            dashboardFromMillis = from
+                            dashboardToMillis = to
+                            render()
+                        }
+                    },
+                    endCalendar.get(Calendar.YEAR), endCalendar.get(Calendar.MONTH), endCalendar.get(Calendar.DAY_OF_MONTH),
+                ).show()
+            },
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH),
+        ).show()
+    }
+
+    private fun dayBoundary(year: Int, month: Int, day: Int, endOfDay: Boolean): Long = Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, day)
+        set(Calendar.HOUR_OF_DAY, if (endOfDay) 23 else 0)
+        set(Calendar.MINUTE, if (endOfDay) 59 else 0)
+        set(Calendar.SECOND, if (endOfDay) 59 else 0)
+        set(Calendar.MILLISECOND, if (endOfDay) 999 else 0)
+    }.timeInMillis
+
+    private fun formatPeriod(fromMillis: Long?, toMillis: Long?): String {
+        if (fromMillis == null) return "كل السجل"
+        val formatter = SimpleDateFormat("dd MMM yyyy", Locale("ar"))
+        return if (toMillis == null) "من ${formatter.format(Date(fromMillis))}" else "${formatter.format(Date(fromMillis))} – ${formatter.format(Date(toMillis))}"
     }
 
     private fun renderOperations() {
@@ -301,11 +428,15 @@ class MainActivity : AppCompatActivity() {
         ) { operationCategory = it }
         val events = database.events(
             days = operationDays,
+            fromMillis = operationFromMillis,
+            toMillis = operationToMillis,
             sender = operationSender,
             category = operationCategory,
             companyName = operationCompany,
             search = operationSearch.text?.toString(),
+            bodyKeywords = operationBodyKeywords,
             reviewOnly = operationReviewOnly,
+            custodyOnly = operationCustodyOnly,
         )
         operationsAdapter.submit(events)
         operationsEmpty.visibility = if (events.isEmpty()) View.VISIBLE else View.GONE
@@ -314,13 +445,17 @@ class MainActivity : AppCompatActivity() {
             text = if (reviewCount == 0) "لا توجد مراجعة للتصدير" else "تصدير $reviewCount رسالة تحتاج مراجعة (JSON)"
             isEnabled = reviewCount > 0
         }
-        val window = when (operationDays) {
+        val window = when {
+            operationFromMillis != null -> formatPeriod(operationFromMillis, operationToMillis)
+            else -> when (operationDays) {
             7 -> "آخر 7 أيام"
             30 -> "آخر 30 يوم"
             else -> "كل المدة"
+            }
         }
         val review = if (operationReviewOnly) " · تحتاج مراجعة" else ""
-        operationFilterSummary.text = "عرض ${events.size} عملية · ${operationCompany ?: "كل الشركات"} · $window$review · الحد الأقصى 200"
+        val custody = if (operationCustodyOnly) " · عهدة أسامة" else ""
+        operationFilterSummary.text = "عرض ${events.size} عملية · ${operationScopeLabel ?: operationCompany ?: "كل الشركات"} · $window$review$custody · الحد الأقصى 200"
     }
 
     private fun renderOperationFilterControls() {
@@ -877,25 +1012,33 @@ class MainActivity : AppCompatActivity() {
         val instruments = database.instruments()
         val linked = instruments.count { it.companyName != null }
         instrumentDirectory.text = if (instruments.isEmpty()) "لا توجد أدوات مالية مكتشفة بعد." else "تم اكتشاف ${instruments.size} حساب/بطاقة؛ المرتبط منها $linked، وغير المرتبط ${instruments.size - linked}."
-        val summary = RelayStore.summary(this)
         dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
         val reviewCount = database.reviewCount()
-        dashboardTotalMetric.text = summary.total.toString()
-        dashboardIncomingMetric.text = summary.incoming.toString()
-        dashboardOutgoingMetric.text = summary.outgoing.toString()
-        dashboardFeesMetric.text = summary.fees.toString()
-        dashboardReviewMetric.text = reviewCount.toString()
-        // Kept for backwards-compatible state restoration; the visible dashboard uses metric cards.
-        dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nتحتاج مراجعة: $reviewCount"
+        val (dashboardFrom, dashboardTo) = dashboardWindow()
+        dashboardPeriodLabel.text = formatPeriod(dashboardFrom, dashboardTo)
+        findViewById<Chip>(R.id.dashboardPeriodAll).isChecked = dashboardDays == null && dashboardFrom == null
+        findViewById<Chip>(R.id.dashboardPeriod7Days).isChecked = dashboardDays == 7
+        findViewById<Chip>(R.id.dashboardPeriod30Days).isChecked = dashboardDays == 30
+        findViewById<Chip>(R.id.dashboardPeriodCustom).isChecked = dashboardFrom != null
+        renderFlow(arzFlowText, database.financialFlow("شركة أرز", dashboardFrom, dashboardTo))
+        renderFlow(muallamFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo))
+        renderFlow(dohaFlowText, database.financialFlow("مؤسسة دوحة المستهلك التجارية", dashboardFrom, dashboardTo))
+        renderPlatformFlow(keetaFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo, listOf("KEETA", "كيتا", "1310")))
+        renderPlatformFlow(hungerFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo, listOf("HUNGERSTATION", "HUNGER STATION", "HANQARSTISHN", "هنقرستيشن", "0605")))
+        renderPlatformFlow(jahezFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo, listOf("JAHEZ", "جاهز", "7507")))
         findViewById<Button>(R.id.openReviewQueue).apply {
             text = if (reviewCount == 0) "لا توجد رسائل تحتاج مراجعة" else "مراجعة $reviewCount رسالة غير مكتملة الربط أو التصنيف"
             setEnabled(reviewCount > 0)
             setOnClickListener {
                 operationReviewOnly = true
+                operationCustodyOnly = false
+                operationBodyKeywords = emptyList()
+                operationScopeLabel = null
+                operationCompany = null
                 showPage(R.id.operationsPage)
             }
         }
-        renderCustodySummary(database.osamaCustodySummary())
+        renderCustodySummary(database.osamaCustodySummary(dashboardFrom, dashboardTo))
         renderOperations()
         accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."
         accountSuggestions.text = (
@@ -922,6 +1065,24 @@ class MainActivity : AppCompatActivity() {
                 "رصيد البنك لدى أسامة: ${sar(summary.bankWithOsama)}\n" +
                 "إجمالي العهدة معه: ${sar(summary.totalHeldByOsama)}"
         }
+    }
+
+    private fun renderFlow(view: TextView, summary: FinancialFlowSummary) {
+        val money = NumberFormat.getNumberInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        fun sar(value: Double) = "SAR ${money.format(value)}"
+        view.text = "وارد ${sar(summary.incoming)}  ·  خارج ${sar(summary.outgoing)}\n" +
+            "رسوم ${sar(summary.fees)}  ·  ${summary.transactions} عملية"
+    }
+
+    private fun renderPlatformFlow(view: TextView, summary: FinancialFlowSummary) {
+        val money = NumberFormat.getNumberInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        view.text = "تحصيل وارد: SAR ${money.format(summary.incoming)}  ·  ${summary.transactions} حوالة"
     }
 
     private companion object {
