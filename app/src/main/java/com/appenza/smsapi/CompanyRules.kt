@@ -1,7 +1,6 @@
 package com.appenza.smsapi
 
 /**
- * High-confidence local rules inferred from the 1,200-message bank sample.
  * Local accounting rules inferred from the sample and confirmed by the owner.
  * Only masked references are stored; full account numbers are never embedded.
  */

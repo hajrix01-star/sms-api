@@ -32,6 +32,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 import java.text.DateFormat
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var instrumentDirectory: TextView
     private lateinit var dashboardStatus: TextView
     private lateinit var dashboardSummary: TextView
+    private lateinit var custodySummary: TextView
     private lateinit var operationsAdapter: OperationsAdapter
     private lateinit var operationFilterSummary: TextView
     private lateinit var operationsEmpty: TextView
@@ -94,6 +96,7 @@ class MainActivity : AppCompatActivity() {
         instrumentDirectory = findViewById(R.id.instrumentDirectory)
         dashboardStatus = findViewById(R.id.dashboardStatus)
         dashboardSummary = findViewById(R.id.dashboardSummary)
+        custodySummary = findViewById(R.id.custodySummary)
         operationFilterSummary = findViewById(R.id.operationsFilterSummary)
         operationsEmpty = findViewById(R.id.operationsEmpty)
         operationCompanyChips = findViewById(R.id.operationCompanyChips)
@@ -243,7 +246,7 @@ class MainActivity : AppCompatActivity() {
         val database = LedgerDatabase(this)
         renderOperationChips(
             operationCompanyChips,
-            "كل الشركات والنطاقات",
+            "كل الجهات والحسابات",
             database.companies().map { it.name },
             operationCompany,
         ) { operationCompany = it }
@@ -734,13 +737,14 @@ class MainActivity : AppCompatActivity() {
         }.ifBlank { "لا توجد رسائل مستلمة بعد. أضف الاسم المرسل للبنك أو آخر 6–8 أرقام من الرقم الحقيقي." }
         val database = LedgerDatabase(this)
         val companies = database.companies()
-        companyDirectory.text = if (companies.isEmpty()) "لا توجد شركات بعد. أضف ARZ Lounge والمعلم الشامي والنطاق الشخصي." else companies.joinToString(" • ") { it.name }
+        companyDirectory.text = if (companies.isEmpty()) "لا توجد جهات أو حسابات بعد." else companies.joinToString(" • ") { it.name }
         val instruments = database.instruments()
         val linked = instruments.count { it.companyName != null }
         instrumentDirectory.text = if (instruments.isEmpty()) "لا توجد أدوات مالية مكتشفة بعد." else "تم اكتشاف ${instruments.size} حساب/بطاقة؛ المرتبط منها $linked، وغير المرتبط ${instruments.size - linked}."
         val summary = RelayStore.summary(this)
         dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
         dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nغير مصنفة: ${summary.unknown}"
+        renderCustodySummary(database.osamaCustodySummary())
         renderOperations()
         accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."
         accountSuggestions.text = (
@@ -748,6 +752,25 @@ class MainActivity : AppCompatActivity() {
                 "${proposal.companyName} · ${proposal.bankSender} · ${proposal.reference}\n${proposal.role}"
             } + CompanyRules.ambiguousSuggestions()
         ).joinToString("\n\n")
+    }
+
+    private fun renderCustodySummary(summary: CustodySummary) {
+        val amounts = NumberFormat.getNumberInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        fun sar(value: Double) = "SAR ${amounts.format(value)}"
+        val sources = summary.fundingByCompany.entries.joinToString("، ") { (name, amount) -> "$name ${sar(amount)}" }
+        custodySummary.text = if (summary.funded == 0.0 && summary.cardPurchases == 0.0 && summary.cashWithdrawals == 0.0 && summary.transfersOut == 0.0) {
+            "لا توجد حركات عهدة مطابقة بعد. يظهر الملخص عند استيراد أو استقبال تحويل إلى 1994، أو عملية ببطاقة 0187."
+        } else {
+            "تمويل العهدة: ${sar(summary.funded)}${if (sources.isBlank()) "" else "\nالمصادر: $sources"}\n" +
+                "مشتريات بطاقة 0187: ${sar(summary.cardPurchases)}\n" +
+                "كاش سُحب مع أسامة: ${sar(summary.cashWithOsama)}\n" +
+                "حوالات خرجت من العهدة: ${sar(summary.transfersOut)}\n\n" +
+                "رصيد البنك لدى أسامة: ${sar(summary.bankWithOsama)}\n" +
+                "إجمالي العهدة معه: ${sar(summary.totalHeldByOsama)}"
+        }
     }
 
     private companion object {

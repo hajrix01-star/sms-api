@@ -31,7 +31,7 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val event = items[position]
-        holder.category.text = event.category
+        holder.category.text = event.custodyType?.let { "$it · ${event.category}" } ?: event.category
         holder.amount.text = event.amount?.let { "SAR ${amountFormat.format(it)}" } ?: "—"
         val reference = event.instrument?.let { " · $it" }.orEmpty()
         val company = event.companyName?.let { "$it · " }.orEmpty()
