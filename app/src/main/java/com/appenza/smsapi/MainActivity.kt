@@ -35,6 +35,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var importUntil: EditText
     private lateinit var importResult: TextView
     private lateinit var recoveryStatus: TextView
+    private lateinit var companyDirectory: TextView
+    private lateinit var instrumentDirectory: TextView
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
 
@@ -49,6 +51,8 @@ class MainActivity : AppCompatActivity() {
         importUntil = findViewById(R.id.importUntil)
         importResult = findViewById(R.id.importResult)
         recoveryStatus = findViewById(R.id.recoveryStatus)
+        companyDirectory = findViewById(R.id.companyDirectory)
+        instrumentDirectory = findViewById(R.id.instrumentDirectory)
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -77,6 +81,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.recoverNow).setOnClickListener {
             if (saveSenders()) requestReadSmsPermission(ReadAction.RECOVER_NOW)
         }
+        findViewById<Button>(R.id.addCompany).setOnClickListener { showAddCompanyDialog() }
+        findViewById<Button>(R.id.manageInstruments).setOnClickListener { showInstrumentManager() }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -425,6 +431,67 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showAddCompanyDialog() {
+        val field = EditText(this).apply { hint = "مثال: مطعم المعلم الشامي" }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("إضافة شركة أو نطاق شخصي")
+            .setView(field)
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("إضافة") { _, _ ->
+                val name = field.text.toString().trim()
+                if (name.isNotBlank()) {
+                    val added = LedgerDatabase(this).addCompany(name)
+                    Toast.makeText(this, if (added) "تمت إضافة $name" else "هذه الشركة موجودة بالفعل", Toast.LENGTH_LONG).show()
+                    render()
+                }
+            }.show()
+    }
+
+    private fun showInstrumentManager() {
+        val database = LedgerDatabase(this)
+        val companies = database.companies()
+        if (companies.isEmpty()) {
+            Toast.makeText(this, "أضف شركة أو نطاقًا شخصيًا أولًا", Toast.LENGTH_LONG).show()
+            return
+        }
+        val instruments = database.instruments()
+        if (instruments.isEmpty()) {
+            Toast.makeText(this, "لا توجد حسابات أو بطاقات مكتشفة بعد. استقبل رسالة أو استورد السجل أولًا.", Toast.LENGTH_LONG).show()
+            return
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("الحسابات والبطاقات المكتشفة")
+            .setItems(instruments.map { instrument ->
+                "${instrument.reference} · ${instrument.kind} · ${instrument.bankSender}\n${instrument.companyName ?: "غير مربوط"}${instrument.role?.let { " — $it" } ?: ""} · ${instrument.events} حركة"
+            }.toTypedArray()) { _, index -> showInstrumentAssignment(instruments[index], companies) }
+            .setNegativeButton("إغلاق", null)
+            .show()
+    }
+
+    private fun showInstrumentAssignment(instrument: FinancialInstrument, companies: List<Company>) {
+        var selectedCompany = 0
+        MaterialAlertDialogBuilder(this)
+            .setTitle("ربط ${instrument.reference} بـ شركة")
+            .setSingleChoiceItems(companies.map { it.name }.toTypedArray(), 0) { _, index -> selectedCompany = index }
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("التالي") { _, _ -> showRolePicker(instrument, companies[selectedCompany]) }
+            .show()
+    }
+
+    private fun showRolePicker(instrument: FinancialInstrument, company: Company) {
+        val roles = arrayOf("حساب تشغيل وإيداع", "حساب تحويلات ومدفوعات", "بطاقة مشتريات", "بطاقة مندوب مشتريات", "حساب عهدة", "حساب شخصي وسيط", "تسوية نقاط بيع", "غير محدد")
+        var selectedRole = 0
+        MaterialAlertDialogBuilder(this)
+            .setTitle("اختر الدور التشغيلي")
+            .setSingleChoiceItems(roles, 0) { _, index -> selectedRole = index }
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("حفظ") { _, _ ->
+                LedgerDatabase(this).assignInstrument(instrument.reference, instrument.bankSender, instrument.kind, company.id, roles[selectedRole])
+                Toast.makeText(this, "تم ربط ${instrument.reference} بـ ${company.name}", Toast.LENGTH_LONG).show()
+                render()
+            }.show()
+    }
+
     private fun render() {
         chips.removeAllViews()
         senders.forEach { sender ->
@@ -458,6 +525,12 @@ class MainActivity : AppCompatActivity() {
         history.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
             "${receipt.sender}  •  ${formatter.format(Date(receipt.receivedAt))}\n${receipt.outcome}\n${receipt.preview}"
         }.ifBlank { "لا توجد رسائل مستلمة بعد. أضف الاسم المرسل للبنك أو آخر 6–8 أرقام من الرقم الحقيقي." }
+        val database = LedgerDatabase(this)
+        val companies = database.companies()
+        companyDirectory.text = if (companies.isEmpty()) "لا توجد شركات بعد. أضف ARZ Lounge والمعلم الشامي والنطاق الشخصي." else companies.joinToString(" • ") { it.name }
+        val instruments = database.instruments()
+        val linked = instruments.count { it.companyName != null }
+        instrumentDirectory.text = if (instruments.isEmpty()) "لا توجد أدوات مالية مكتشفة بعد." else "تم اكتشاف ${instruments.size} حساب/بطاقة؛ المرتبط منها $linked، وغير المرتبط ${instruments.size - linked}."
     }
 
     private companion object {

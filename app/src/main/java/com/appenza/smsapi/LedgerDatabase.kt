@@ -17,9 +17,11 @@ data class LedgerEvent(
 )
 
 data class LedgerSummary(val total: Int, val incoming: Int, val outgoing: Int, val fees: Int, val unknown: Int)
+data class Company(val id: Long, val name: String)
+data class FinancialInstrument(val reference: String, val bankSender: String, val kind: String, val companyName: String?, val role: String?, val events: Int)
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 1) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -36,9 +38,12 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         """.trimIndent())
         db.execSQL("CREATE INDEX events_received_at_idx ON events(received_at DESC)")
         db.execSQL("CREATE INDEX events_category_idx ON events(category)")
+        createDirectoryTables(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createDirectoryTables(db)
+    }
 
     fun insert(event: LedgerEvent): Boolean {
         val values = ContentValues().apply {
@@ -86,9 +91,53 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
 
     fun clear() = writableDatabase.delete("events", null, null)
 
+    fun companies(): List<Company> = readableDatabase.rawQuery("SELECT id, name FROM companies ORDER BY name", null).use { cursor ->
+        buildList { while (cursor.moveToNext()) add(Company(cursor.getLong(0), cursor.getString(1))) }
+    }
+
+    fun addCompany(name: String): Boolean = writableDatabase.insertWithOnConflict(
+        "companies", null, ContentValues().apply { put("name", name.trim()) }, SQLiteDatabase.CONFLICT_IGNORE,
+    ) != -1L
+
+    fun instruments(): List<FinancialInstrument> = readableDatabase.rawQuery("""
+        SELECT e.instrument, e.sender, MAX(e.body), COUNT(*), c.name, i.role
+        FROM events e
+        LEFT JOIN instruments i ON i.reference = e.instrument
+        LEFT JOIN companies c ON c.id = i.company_id
+        WHERE e.instrument IS NOT NULL AND e.instrument != ''
+        GROUP BY e.instrument, e.sender
+        ORDER BY c.name IS NULL DESC, COUNT(*) DESC
+    """.trimIndent(), null).use { cursor ->
+        buildList {
+            while (cursor.moveToNext()) {
+                val sample = cursor.getString(2).orEmpty()
+                add(FinancialInstrument(
+                    reference = cursor.getString(0), bankSender = cursor.getString(1),
+                    kind = if (sample.contains("بطاقة") || sample.contains("مدى")) "بطاقة" else "حساب",
+                    companyName = cursor.getString(4), role = cursor.getString(5), events = cursor.getInt(3),
+                ))
+            }
+        }
+    }
+
+    fun assignInstrument(reference: String, sender: String, kind: String, companyId: Long, role: String) {
+        writableDatabase.insertWithOnConflict("instruments", null, ContentValues().apply {
+            put("reference", reference); put("bank_sender", sender); put("kind", kind); put("company_id", companyId); put("role", role)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
     private fun fingerprint(event: LedgerEvent): String = MessageDigest.getInstance("SHA-256")
         .digest("${event.sender}|${event.receivedAt}|${event.body}".toByteArray())
         .joinToString("") { "%02x".format(it) }
+
+    private fun createDirectoryTables(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS companies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS instruments (
+            reference TEXT PRIMARY KEY, bank_sender TEXT NOT NULL, kind TEXT NOT NULL,
+            company_id INTEGER NOT NULL, role TEXT NOT NULL,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )""".trimIndent())
+    }
 }
 
 object BankEventParser {
