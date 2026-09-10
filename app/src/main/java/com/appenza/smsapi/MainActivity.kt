@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var history: TextView
     private lateinit var importUntil: EditText
     private lateinit var importResult: TextView
+    private lateinit var recoveryStatus: TextView
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
 
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         history = findViewById(R.id.receiptHistory)
         importUntil = findViewById(R.id.importUntil)
         importResult = findViewById(R.id.importResult)
+        recoveryStatus = findViewById(R.id.recoveryStatus)
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -62,9 +64,23 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.importHistory).setOnClickListener { if (saveSenders()) requestReadSmsPermission(ReadAction.IMPORT) }
         findViewById<Button>(R.id.exportTrainingSample).setOnClickListener { if (saveSenders()) requestReadSmsPermission(ReadAction.EXPORT_SAMPLE) }
         findViewById<Button>(R.id.pickSenders).setOnClickListener { requestReadSmsPermission(ReadAction.PICK_SENDERS) }
+        findViewById<Button>(R.id.toggleRecovery).setOnClickListener {
+            if (!saveSenders()) return@setOnClickListener
+            if (!RelayStore.preferences(this).getBoolean(RelayStore.ENABLED, false)) {
+                Toast.makeText(this, "فعّل الاستقبال المباشر أولًا", Toast.LENGTH_LONG).show()
+            } else if (RelayStore.preferences(this).getBoolean(RelayStore.RECOVERY_ENABLED, false)) {
+                disableRecovery()
+            } else {
+                requestReadSmsPermission(ReadAction.ENABLE_RECOVERY)
+            }
+        }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
-            RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, false).apply()
+            RelayStore.preferences(this).edit()
+                .putBoolean(RelayStore.ENABLED, false)
+                .putBoolean(RelayStore.RECOVERY_ENABLED, false)
+                .apply()
+            RecoveryScheduler.cancel(this)
             render()
         }
         findViewById<Button>(R.id.test).setOnClickListener {
@@ -129,11 +145,26 @@ class MainActivity : AppCompatActivity() {
             ReadAction.IMPORT -> importHistory()
             ReadAction.PICK_SENDERS -> showSenderPicker()
             ReadAction.EXPORT_SAMPLE -> exportTrainingSample()
+            ReadAction.ENABLE_RECOVERY -> enableRecovery()
         }
     }
 
     private fun enable() {
         RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, true).apply()
+        if (RelayStore.preferences(this).getBoolean(RelayStore.RECOVERY_ENABLED, false)) RecoveryScheduler.schedule(this)
+        render()
+    }
+
+    private fun enableRecovery() {
+        RelayStore.preferences(this).edit().putBoolean(RelayStore.RECOVERY_ENABLED, true).apply()
+        RecoveryScheduler.schedule(this)
+        Toast.makeText(this, "تم تفعيل فحص التعافي اليومي. يحدد أندرويد وقت التنفيذ لتقليل الأثر على البطارية.", Toast.LENGTH_LONG).show()
+        render()
+    }
+
+    private fun disableRecovery() {
+        RelayStore.preferences(this).edit().putBoolean(RelayStore.RECOVERY_ENABLED, false).apply()
+        RecoveryScheduler.cancel(this)
         render()
     }
 
@@ -149,6 +180,7 @@ class MainActivity : AppCompatActivity() {
                 val matches = mutableListOf<HistoricalMessage>()
                 val visibleSenders = linkedSetOf<String>()
                 var scanned = 0
+                var securityExcluded = 0
                 val cursor = contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
@@ -166,26 +198,30 @@ class MainActivity : AppCompatActivity() {
                         val body = cursor.getString(bodyColumn).orEmpty()
                         val receivedAt = cursor.getLong(dateColumn)
                         if (sender.isNotBlank() && visibleSenders.size < MAX_VISIBLE_SENDERS) visibleSenders += sender
-                        if (matches.size < MAX_IMPORT && RelayStore.matchesSender(sender, allowedSenders)) {
+                        if (RelayStore.matchesSender(sender, allowedSenders) && RelayStore.isSecurityMessage(body)) {
+                            securityExcluded++
+                        } else if (matches.size < MAX_IMPORT && RelayStore.matchesSender(sender, allowedSenders)) {
                             matches += HistoricalMessage(sender, body, receivedAt)
                         }
                     }
                 }
-                matches.asReversed().forEach { message ->
-                    val outcome = if (RelayStore.isOtp(message.body)) "تم استيراد السجل ثم استبعاده: رمز تحقق" else "تم استيراده من سجل الرسائل"
-                    val storedBody = if (RelayStore.isOtp(message.body)) "محتوى مخفي لحماية رمز التحقق" else message.body
-                    RelayStore.recordReceipt(this, message.sender, storedBody, message.receivedAt, outcome)
+                val storedCount = matches.asReversed().count { message ->
+                    RelayStore.recordReceipt(this, message.sender, message.body, message.receivedAt, "تم استيراده من سجل الرسائل")
                 }
-                ImportResult(matches.size, scanned, visibleSenders.toList())
+                ImportResult(storedCount, scanned, visibleSenders.toList(), securityExcluded)
             }
             runOnUiThread {
                 result.onSuccess { import ->
                     render()
                     val message = if (import.imported == 0) {
-                        "فُحصت ${import.scanned} رسالة ولم تطابق «${senders.joinToString("، ")}" +
-                            "». المرسلون المرئيون: ${import.visibleSenders.ifEmpty { listOf("لا توجد") }.joinToString("، ")}"
+                        if (import.securityExcluded > 0) {
+                            "لم تُضف رسائل مالية جديدة. استُبعدت ${import.securityExcluded} رسالة OTP أو أمن، أو أن الرسائل المطابقة استوردت سابقًا."
+                        } else {
+                            "فُحصت ${import.scanned} رسالة ولم تطابق «${senders.joinToString("، ")}" +
+                                "». المرسلون المرئيون: ${import.visibleSenders.ifEmpty { listOf("لا توجد") }.joinToString("، ")}"
+                        }
                     } else {
-                        "تم استيراد ${import.imported} رسالة مطابقة بعد فحص ${import.scanned} رسالة"
+                        "تم استيراد ${import.imported} رسالة مطابقة بعد فحص ${import.scanned} رسالة. استُبعدت ${import.securityExcluded} رسالة أمنية أو OTP."
                     }
                     importResult.text = message
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
@@ -260,6 +296,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             val result = runCatching {
                 val countBySender = selectedSenders.associateWith { 0 }.toMutableMap()
+                val securityExcludedBySender = selectedSenders.associateWith { 0 }.toMutableMap()
                 val messages = JSONArray()
                 val cursor = contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
@@ -280,14 +317,17 @@ class MainActivity : AppCompatActivity() {
                             countBySender.getValue(configured) < SAMPLE_PER_SENDER && RelayStore.matchesSender(actualSender, listOf(configured))
                         } ?: continue
                         val body = cursor.getString(bodyColumn).orEmpty()
+                        if (RelayStore.isSecurityMessage(body)) {
+                            securityExcludedBySender[configuredSender] = securityExcludedBySender.getValue(configuredSender) + 1
+                            continue
+                        }
                         val receivedAt = cursor.getLong(dateColumn)
                         messages.put(
                             JSONObject()
                                 .put("sender", actualSender)
                                 .put("selected_sender", configuredSender)
                                 .put("received_at_millis", receivedAt)
-                                .put("is_otp", RelayStore.isOtp(body))
-                                .put("body_sanitized", sanitizeForTraining(body)),
+                                .put("body_sanitized", body),
                         )
                         countBySender[configuredSender] = countBySender.getValue(configuredSender) + 1
                     }
@@ -295,15 +335,20 @@ class MainActivity : AppCompatActivity() {
                 val counts = JSONObject().apply {
                     countBySender.forEach { (sender, count) -> put(sender, count) }
                 }
+                val excludedCounts = JSONObject().apply {
+                    securityExcludedBySender.forEach { (sender, count) -> put(sender, count) }
+                }
                 val root = JSONObject()
-                    .put("schema_version", 1)
+                    .put("schema_version", 2)
                     .put("purpose", "bank_sms_rule_learning")
                     .put("generated_at_millis", System.currentTimeMillis())
                     .put("max_messages_per_sender", SAMPLE_PER_SENDER)
+                    .put("security_messages_excluded", true)
                     .put("selected_senders", JSONArray(selectedSenders))
                     .put("counts_by_sender", counts)
+                    .put("security_messages_excluded_by_sender", excludedCounts)
                     .put("messages", messages)
-                ExportSample(root.toString(2), messages.length(), countBySender)
+                ExportSample(root.toString(2), messages.length(), countBySender, securityExcludedBySender)
             }
             runOnUiThread {
                 result.onSuccess { sample ->
@@ -329,7 +374,8 @@ class MainActivity : AppCompatActivity() {
         file.writeText(sample.json, Charsets.UTF_8)
         val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
         val counts = sample.counts.entries.joinToString("، ") { "${it.key}: ${it.value}" }
-        importResult.text = "تم إنشاء ${sample.messageCount} رسالة للعينة ($counts). اختر ChatGPT من المشاركة لإرسال الملف."
+        val excluded = sample.securityExcluded.values.sum()
+        importResult.text = "تم إنشاء ${sample.messageCount} رسالة للعينة ($counts). استُبعدت $excluded رسالة OTP أو أمن. اختر ChatGPT من المشاركة لإرسال الملف."
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/json"
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -337,11 +383,6 @@ class MainActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivity(Intent.createChooser(shareIntent, "إرسال عينة JSON"))
-    }
-
-    private fun sanitizeForTraining(body: String): String {
-        if (!RelayStore.isOtp(body)) return body
-        return body.replace(Regex("(?<![0-9٠-٩])[0-9٠-٩]{4,8}(?![0-9٠-٩])"), "[OTP]")
     }
 
     private fun displaySenderPicker(discovered: List<String>) {
@@ -380,11 +421,20 @@ class MainActivity : AppCompatActivity() {
         val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
         val isEnabled = RelayStore.preferences(this).getBoolean(RelayStore.ENABLED, false)
         status.text = when {
-            isEnabled && hasPermission -> "الحالة: استقبال الرسائل مفعّل"
+            isEnabled && hasPermission -> "الحالة: الاستقبال المباشر مفعّل — لا توجد خدمة تعمل باستمرار"
             hasPermission -> "الحالة: الإذن مسموح، الاستقبال غير مفعّل"
             else -> "الحالة: إذن SMS مطلوب للاختبار"
         }
         val formatter = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale("ar"))
+        val recoveryEnabled = RelayStore.preferences(this).getBoolean(RelayStore.RECOVERY_ENABLED, false)
+        val lastRecovery = RelayStore.preferences(this).getLong(RelayStore.RECOVERY_LAST_AT, 0L)
+        val lastImported = RelayStore.preferences(this).getInt(RelayStore.RECOVERY_LAST_IMPORTED, 0)
+        recoveryStatus.text = if (recoveryEnabled) {
+            val lastRun = if (lastRecovery == 0L) "لم يعمل بعد" else "آخر فحص: ${formatter.format(Date(lastRecovery))} ($lastImported جديدة)"
+            "فحص التعافي اليومي: مفعّل. يراجع آخر 48 ساعة مرة تقريبًا كل 24 ساعة حسب أندرويد. $lastRun"
+        } else {
+            "فحص التعافي اليومي: غير مفعّل. الاستقبال المباشر وحده خفيف وكافٍ في الوضع الطبيعي."
+        }
         history.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
             "${receipt.sender}  •  ${formatter.format(Date(receipt.receivedAt))}\n${receipt.outcome}\n${receipt.preview}"
         }.ifBlank { "لا توجد رسائل مستلمة بعد. أضف الاسم المرسل للبنك أو آخر 6–8 أرقام من الرقم الحقيقي." }
@@ -402,7 +452,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
-    private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>)
-    private data class ExportSample(val json: String, val messageCount: Int, val counts: Map<String, Int>)
-    private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE }
+    private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>, val securityExcluded: Int)
+    private data class ExportSample(val json: String, val messageCount: Int, val counts: Map<String, Int>, val securityExcluded: Map<String, Int>)
+    private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE, ENABLE_RECOVERY }
 }

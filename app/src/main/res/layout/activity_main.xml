@@ -154,7 +154,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:lineSpacingExtra="3dp"
-                    android:text="لا يوجد API ولا اتصال إنترنت في هذه النسخة. تستقبل فقط الرسائل الجديدة المطابقة وتعرضها على هذا الجوال."
+                    android:text="لا يوجد API ولا اتصال إنترنت في هذه النسخة. عند وصول رسالة جديدة يوقظ أندرويد التطبيق لثوانٍ فقط؛ لا توجد خدمة تعمل باستمرار."
                     android:textColor="#CFC7D2"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -170,6 +170,36 @@
             android:textSize="16sp"
             app:backgroundTint="#16805D"
             app:cornerRadius="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="حماية من فقد الرسائل"
+            android:textColor="#F4EFF4"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/recoveryStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="#CFC7D2"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggleRecovery"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="تفعيل/إيقاف فحص التعافي اليومي"
+            android:textColor="#DDF7EA"
+            app:backgroundTint="#244A3C"
+            app:cornerRadius="16dp"
+            app:strokeColor="#68B497"
+            app:strokeWidth="1dp" />
 
         <TextView
             android:layout_width="match_parent"
@@ -244,7 +274,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
-            android:text="يصدر آخر 200 رسالة لكل مرسل محدد في JSON. رمز OTP يُخفى، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
+            android:text="يصدر آخر 200 رسالة غير أمنية لكل مرسل محدد في JSON. رسائل OTP والأمن تُستبعد بالكامل، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
             android:textColor="#CFC7D2"
             android:textSize="14sp" />
 
@@ -323,7 +353,7 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="12dp"
             android:lineSpacingExtra="4dp"
-            android:text="يحفظ التطبيق آخر 200 سجل على هذا الجوال فقط. محتوى رموز التحقق يُخفى تلقائيًا. الاستيراد يحتاج إذن قراءة SMS ويعمل يدويًا فقط."
+            android:text="يحفظ التطبيق آخر 200 سجل مالي على هذا الجوال فقط. رسائل OTP والأمن لا تُحفظ ولا تُصدّر. الاستيراد التاريخي يدوي؛ وفحص التعافي اختياري ومنخفض الأثر."
             android:textColor="#B8B0BC"
             android:textSize="14sp" />
     </LinearLayout>

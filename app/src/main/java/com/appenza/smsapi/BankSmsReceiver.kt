@@ -16,14 +16,8 @@ class BankSmsReceiver : BroadcastReceiver() {
                     Telephony.Sms.Intents.getMessagesFromIntent(intent).forEach { message ->
                         val sender = message.displayOriginatingAddress ?: return@forEach
                         val body = message.messageBody.orEmpty()
-                        if (RelayStore.matchesSender(sender, allowedSenders)) {
-                            val outcome = if (RelayStore.isOtp(body)) {
-                                "تم الاستلام ثم استبعادها: رمز تحقق"
-                            } else {
-                                "تم الاستلام ومطابقة المرسل"
-                            }
-                            val storedBody = if (RelayStore.isOtp(body)) "محتوى مخفي لحماية رمز التحقق" else body
-                            RelayStore.recordReceipt(context, sender, storedBody, message.timestampMillis, outcome)
+                        if (RelayStore.matchesSender(sender, allowedSenders) && !RelayStore.isSecurityMessage(body)) {
+                            RelayStore.recordReceipt(context, sender, body, message.timestampMillis, "تم الاستلام ومطابقة المرسل")
                         }
                     }
                 }
