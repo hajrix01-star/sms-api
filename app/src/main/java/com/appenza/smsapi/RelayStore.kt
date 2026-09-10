@@ -2,8 +2,6 @@ package com.appenza.smsapi
 
 import android.content.Context
 import org.json.JSONArray
-import org.json.JSONObject
-import java.security.MessageDigest
 import java.util.Locale
 
 data class Receipt(
@@ -19,8 +17,6 @@ object RelayStore {
     const val RECOVERY_ENABLED = "recovery_enabled"
     const val RECOVERY_LAST_AT = "recovery_last_at"
     const val RECOVERY_LAST_IMPORTED = "recovery_last_imported"
-    private const val RECEIPTS = "receipts"
-    private const val MAX_RECEIPTS = 200
 
     fun preferences(context: Context) = context.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
 
@@ -33,44 +29,18 @@ object RelayStore {
         preferences(context).edit().putString(SENDERS, JSONArray(values).toString()).apply()
     }
 
-    /**
-     * Stores a small local receipt only once. The original message body is never stored here;
-     * only a display preview and a non-reversible fingerprint are retained.
-     */
     fun recordReceipt(context: Context, sender: String, body: String, receivedAt: Long, outcome: String): Boolean {
-        val key = messageKey(sender, body, receivedAt)
-        val current = receiptsJson(context)
-        if ((0 until current.length()).any { index -> current.getJSONObject(index).optString("key") == key }) return false
-        val stored = JSONArray()
-        stored.put(
-            JSONObject()
-                .put("key", key)
-                .put("sender", sender)
-                .put("receivedAt", receivedAt)
-                .put("outcome", outcome)
-                .put("preview", preview(body)),
-        )
-        for (index in 0 until minOf(current.length(), MAX_RECEIPTS - 1)) stored.put(current.getJSONObject(index))
-        preferences(context).edit().putString(RECEIPTS, stored.toString()).apply()
-        return true
+        return LedgerDatabase(context).insert(BankEventParser.parse(sender, body, receivedAt))
     }
 
-    fun receipts(context: Context): List<Receipt> = runCatching {
-        val values = receiptsJson(context)
-        (0 until values.length()).map { index ->
-            values.getJSONObject(index).let {
-                Receipt(
-                    sender = it.getString("sender"),
-                    receivedAt = it.getLong("receivedAt"),
-                    outcome = it.getString("outcome"),
-                    preview = it.getString("preview"),
-                )
-            }
-        }
-    }.getOrDefault(emptyList())
+    fun receipts(context: Context): List<Receipt> = LedgerDatabase(context).latest().map {
+        Receipt(it.sender, it.receivedAt, it.category, preview(it.body))
+    }
+
+    fun summary(context: Context) = LedgerDatabase(context).summary()
 
     fun clearReceipts(context: Context) {
-        preferences(context).edit().remove(RECEIPTS).apply()
+        LedgerDatabase(context).clear()
     }
 
     /** Security and OTP messages are excluded completely from imports, the local ledger and JSON exports. */
@@ -99,13 +69,6 @@ object RelayStore {
     }
 
     private fun canonical(value: String) = value.lowercase().filter(Char::isLetterOrDigit)
-
-    private fun receiptsJson(context: Context) = JSONArray(preferences(context).getString(RECEIPTS, "[]") ?: "[]")
-
-    private fun messageKey(sender: String, body: String, receivedAt: Long): String {
-        val source = "$sender|$receivedAt|$body".toByteArray(Charsets.UTF_8)
-        return MessageDigest.getInstance("SHA-256").digest(source).joinToString("") { "%02x".format(it) }
-    }
 
     private fun preview(value: String): String {
         val normalized = value.replace(Regex("\\s+"), " ").trim()

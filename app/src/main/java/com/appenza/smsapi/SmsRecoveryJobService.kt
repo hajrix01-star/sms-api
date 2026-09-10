@@ -4,12 +4,12 @@ import android.app.job.JobParameters
 import android.app.job.JobService
 import android.provider.Telephony
 
-/** Reads only the recent 48-hour window, once daily when the user has explicitly enabled it. */
+/** Reads a rolling seven-day window every six hours when the user has explicitly enabled it. */
 class SmsRecoveryJobService : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
         Thread {
             try {
-                recoverRecentMessages()
+                SmsRecovery.recover(this, automatic = true)
             } finally {
                 jobFinished(params, false)
             }
@@ -19,17 +19,22 @@ class SmsRecoveryJobService : JobService() {
 
     override fun onStopJob(params: JobParameters): Boolean = true
 
-    private fun recoverRecentMessages() {
-        val preferences = RelayStore.preferences(this)
-        if (!preferences.getBoolean(RelayStore.ENABLED, false) || !preferences.getBoolean(RelayStore.RECOVERY_ENABLED, false)) return
+}
 
-        val senders = RelayStore.senders(this)
-        if (senders.isEmpty()) return
+data class RecoveryResult(val scanned: Int, val imported: Int)
+
+object SmsRecovery {
+    fun recover(context: android.content.Context, automatic: Boolean): RecoveryResult {
+        val preferences = RelayStore.preferences(context)
+        if (!preferences.getBoolean(RelayStore.ENABLED, false) || (automatic && !preferences.getBoolean(RelayStore.RECOVERY_ENABLED, false))) return RecoveryResult(0, 0)
+
+        val senders = RelayStore.senders(context)
+        if (senders.isEmpty()) return RecoveryResult(0, 0)
 
         val earliest = System.currentTimeMillis() - RECOVERY_WINDOW_MILLIS
         var imported = 0
         var scanned = 0
-        contentResolver.query(
+        context.contentResolver.query(
             Telephony.Sms.Inbox.CONTENT_URI,
             arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
             "${Telephony.Sms.DATE} >= ?",
@@ -46,20 +51,18 @@ class SmsRecoveryJobService : JobService() {
                 if (
                     RelayStore.matchesSender(sender, senders) &&
                     !RelayStore.isSecurityMessage(body) &&
-                    RelayStore.recordReceipt(this, sender, body, cursor.getLong(dateColumn), "تم التقاطها بفحص التعافي اليومي")
+                    RelayStore.recordReceipt(context, sender, body, cursor.getLong(dateColumn), if (automatic) "تم التقاطها بفحص التعافي" else "تم التقاطها بالفحص اليدوي")
                 ) {
                     imported++
                 }
             }
         }
-        preferences.edit()
+        if (automatic) preferences.edit()
             .putLong(RelayStore.RECOVERY_LAST_AT, System.currentTimeMillis())
-            .putInt(RelayStore.RECOVERY_LAST_IMPORTED, imported)
-            .apply()
+            .putInt(RelayStore.RECOVERY_LAST_IMPORTED, imported).apply()
+        return RecoveryResult(scanned, imported)
     }
 
-    private companion object {
-        const val RECOVERY_WINDOW_MILLIS = 48L * 60L * 60L * 1000L
-        const val MAX_RECOVERY_SCAN = 500
-    }
+    private const val RECOVERY_WINDOW_MILLIS = 7L * 24L * 60L * 60L * 1000L
+    private const val MAX_RECOVERY_SCAN = 5_000
 }

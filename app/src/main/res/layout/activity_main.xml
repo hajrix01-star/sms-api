@@ -194,7 +194,19 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
-            android:text="تفعيل/إيقاف فحص التعافي اليومي"
+            android:text="تفعيل/إيقاف فحص التعافي الاحتياطي"
+            android:textColor="#DDF7EA"
+            app:backgroundTint="#244A3C"
+            app:cornerRadius="16dp"
+            app:strokeColor="#68B497"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/recoverNow"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:text="فحص الآن لآخر 7 أيام"
             android:textColor="#DDF7EA"
             app:backgroundTint="#244A3C"
             app:cornerRadius="16dp"
@@ -353,7 +365,7 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="12dp"
             android:lineSpacingExtra="4dp"
-            android:text="يحفظ التطبيق آخر 200 سجل مالي على هذا الجوال فقط. رسائل OTP والأمن لا تُحفظ ولا تُصدّر. الاستيراد التاريخي يدوي؛ وفحص التعافي اختياري ومنخفض الأثر."
+            android:text="يحفظ التطبيق السجل المالي محليًا. رسائل OTP والأمن لا تُحفظ ولا تُصدّر. الاستيراد التاريخي يدوي؛ وفحص التعافي الاحتياطي يعمل كل 6 ساعات دون خدمة دائمة."
             android:textColor="#B8B0BC"
             android:textSize="14sp" />
     </LinearLayout>

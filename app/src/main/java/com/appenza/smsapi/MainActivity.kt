@@ -74,6 +74,9 @@ class MainActivity : AppCompatActivity() {
                 requestReadSmsPermission(ReadAction.ENABLE_RECOVERY)
             }
         }
+        findViewById<Button>(R.id.recoverNow).setOnClickListener {
+            if (saveSenders()) requestReadSmsPermission(ReadAction.RECOVER_NOW)
+        }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -146,6 +149,7 @@ class MainActivity : AppCompatActivity() {
             ReadAction.PICK_SENDERS -> showSenderPicker()
             ReadAction.EXPORT_SAMPLE -> exportTrainingSample()
             ReadAction.ENABLE_RECOVERY -> enableRecovery()
+            ReadAction.RECOVER_NOW -> recoverNow()
         }
     }
 
@@ -166,6 +170,22 @@ class MainActivity : AppCompatActivity() {
         RelayStore.preferences(this).edit().putBoolean(RelayStore.RECOVERY_ENABLED, false).apply()
         RecoveryScheduler.cancel(this)
         render()
+    }
+
+    private fun recoverNow() {
+        Thread {
+            val result = runCatching { SmsRecovery.recover(this, automatic = false) }
+            runOnUiThread {
+                result.onSuccess {
+                    render()
+                    val message = "اكتمل الفحص اليدوي لآخر 7 أيام: فُحصت ${it.scanned} رسالة وأُضيفت ${it.imported} عملية جديدة."
+                    importResult.text = message
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }.onFailure {
+                    Toast.makeText(this, "تعذر الفحص اليدوي: ${it.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     private fun importHistory() {
@@ -431,9 +451,9 @@ class MainActivity : AppCompatActivity() {
         val lastImported = RelayStore.preferences(this).getInt(RelayStore.RECOVERY_LAST_IMPORTED, 0)
         recoveryStatus.text = if (recoveryEnabled) {
             val lastRun = if (lastRecovery == 0L) "لم يعمل بعد" else "آخر فحص: ${formatter.format(Date(lastRecovery))} ($lastImported جديدة)"
-            "فحص التعافي اليومي: مفعّل. يراجع آخر 48 ساعة مرة تقريبًا كل 24 ساعة حسب أندرويد. $lastRun"
+            "فحص التعافي: مفعّل. يراجع آخر 7 أيام كل 6 ساعات تقريبًا حسب أندرويد. $lastRun"
         } else {
-            "فحص التعافي اليومي: غير مفعّل. الاستقبال المباشر وحده خفيف وكافٍ في الوضع الطبيعي."
+            "فحص التعافي: غير مفعّل. الاستقبال المباشر وحده خفيف وكافٍ في الوضع الطبيعي."
         }
         history.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
             "${receipt.sender}  •  ${formatter.format(Date(receipt.receivedAt))}\n${receipt.outcome}\n${receipt.preview}"
@@ -454,5 +474,5 @@ class MainActivity : AppCompatActivity() {
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
     private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>, val securityExcluded: Int)
     private data class ExportSample(val json: String, val messageCount: Int, val counts: Map<String, Int>, val securityExcluded: Map<String, Int>)
-    private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE, ENABLE_RECOVERY }
+    private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE, ENABLE_RECOVERY, RECOVER_NOW }
 }

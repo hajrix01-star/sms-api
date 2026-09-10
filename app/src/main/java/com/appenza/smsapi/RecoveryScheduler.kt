@@ -11,14 +11,14 @@ import android.content.Context
  */
 object RecoveryScheduler {
     private const val JOB_ID = 20101
-    private const val DAY_MILLIS = 24L * 60L * 60L * 1000L
+    private const val RECOVERY_INTERVAL_MILLIS = 6L * 60L * 60L * 1000L
     private const val FLEX_MILLIS = 60L * 60L * 1000L
 
     fun schedule(context: Context) {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
         val component = ComponentName(context, SmsRecoveryJobService::class.java)
         val job = JobInfo.Builder(JOB_ID, component)
-            .setPeriodic(DAY_MILLIS, FLEX_MILLIS)
+            .setPeriodic(RECOVERY_INTERVAL_MILLIS, FLEX_MILLIS)
             .setPersisted(true)
             .build()
         scheduler.schedule(job)
