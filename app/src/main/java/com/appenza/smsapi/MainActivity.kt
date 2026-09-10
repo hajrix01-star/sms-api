@@ -755,7 +755,7 @@ class MainActivity : AppCompatActivity() {
         dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nتحتاج مراجعة: $reviewCount"
         findViewById<Button>(R.id.openReviewQueue).apply {
             text = if (reviewCount == 0) "لا توجد رسائل تحتاج مراجعة" else "مراجعة $reviewCount رسالة غير مكتملة الربط أو التصنيف"
-            isEnabled = reviewCount > 0
+            setEnabled(reviewCount > 0)
             setOnClickListener {
                 operationReviewOnly = true
                 showPage(R.id.operationsPage)
