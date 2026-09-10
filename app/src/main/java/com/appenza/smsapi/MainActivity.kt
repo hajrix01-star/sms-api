@@ -16,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -48,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
+        applySystemBarInsets()
 
         chips = findViewById(R.id.senderChips)
         status = findViewById(R.id.status)
@@ -121,6 +124,35 @@ class MainActivity : AppCompatActivity() {
             render()
         }
         render()
+    }
+
+    /**
+     * Android 15+ renders target-SDK 35+ apps edge-to-edge by default.  Apply
+     * the real device insets instead of assuming a status-bar or gesture-bar size.
+     */
+    private fun applySystemBarInsets() {
+        val root = findViewById<View>(R.id.shellRoot)
+        val topNavigation = findViewById<View>(R.id.topNavigation)
+        val pages = findViewById<View>(R.id.pageContainer)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val safeArea = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            topNavigation.setPadding(
+                topNavigation.paddingLeft,
+                safeArea.top,
+                topNavigation.paddingRight,
+                0,
+            )
+            pages.setPadding(
+                pages.paddingLeft,
+                0,
+                pages.paddingRight,
+                safeArea.bottom,
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     override fun onResume() {

@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.11.1-top-navigation"
+        versionCode = 14
+        versionName = "0.11.2-adaptive-insets"
     }
 
     buildTypes {

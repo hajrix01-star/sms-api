@@ -1,20 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/shellRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#111018"
     android:layoutDirection="rtl">
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="62dp" android:gravity="center" android:orientation="horizontal" android:background="#1D1B24">
-        <com.google.android.material.button.MaterialButton android:id="@+id/navDashboard" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الرئيسية" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navOperations" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="العمليات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navAccounts" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الحسابات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/navSettings" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الإعدادات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+    <LinearLayout
+        android:id="@+id/topNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="62dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:background="#1D1B24">
+        <com.google.android.material.button.MaterialButton android:id="@+id/navDashboard" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="الرئيسية" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navOperations" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="العمليات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navAccounts" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="الحسابات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navSettings" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="الإعدادات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
     </LinearLayout>
 
     <FrameLayout
+        android:id="@+id/pageContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
