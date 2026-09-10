@@ -18,7 +18,7 @@
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="اختر ما تريد عرضه ثم اضغط إظهار النتائج." android:textColor="@color/text_secondary" android:textSize="13sp" />
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="الفترة" android:textColor="@color/text_secondary" android:textSize="13sp" />
-        <com.google.android.material.chip.ChipGroup android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" app:chipSpacingHorizontal="6dp" app:chipSpacingVertical="5dp" app:singleSelection="true">
+        <com.google.android.material.chip.ChipGroup android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" app:chipSpacingHorizontal="6dp" app:chipSpacingVertical="5dp" app:selectionRequired="true" app:singleSelection="true">
             <com.google.android.material.chip.Chip android:id="@+id/sheetPeriodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="كل المدة" />
             <com.google.android.material.chip.Chip android:id="@+id/sheetPeriodThisMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="هذا الشهر" />
             <com.google.android.material.chip.Chip android:id="@+id/sheetPeriodLastMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="الشهر الماضي" />

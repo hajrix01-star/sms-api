@@ -43,8 +43,6 @@ import org.json.JSONObject
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
-    private enum class CalendarMonthFilter { THIS_MONTH, LAST_MONTH }
-
     private lateinit var chips: ChipGroup
     private lateinit var status: TextView
     private lateinit var input: EditText
@@ -365,19 +363,8 @@ class MainActivity : AppCompatActivity() {
         else -> null to null
     }
 
-    private fun calendarMonthWindow(filter: CalendarMonthFilter): Pair<Long, Long> {
-        val calendar = Calendar.getInstance()
-        if (filter == CalendarMonthFilter.LAST_MONTH) calendar.add(Calendar.MONTH, -1)
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val from = calendar.timeInMillis
-        calendar.add(Calendar.MONTH, 1)
-        calendar.add(Calendar.MILLISECOND, -1)
-        return from to calendar.timeInMillis
-    }
+    private fun calendarMonthWindow(filter: CalendarMonthFilter): Pair<Long, Long> =
+        DateRangeCalculator.calendarMonthWindow(filter)
 
     private fun showDashboardDateRangePicker() {
         val calendar = Calendar.getInstance()
@@ -409,15 +396,8 @@ class MainActivity : AppCompatActivity() {
         ).show()
     }
 
-    private fun dayBoundary(year: Int, month: Int, day: Int, endOfDay: Boolean): Long = Calendar.getInstance().apply {
-        set(Calendar.YEAR, year)
-        set(Calendar.MONTH, month)
-        set(Calendar.DAY_OF_MONTH, day)
-        set(Calendar.HOUR_OF_DAY, if (endOfDay) 23 else 0)
-        set(Calendar.MINUTE, if (endOfDay) 59 else 0)
-        set(Calendar.SECOND, if (endOfDay) 59 else 0)
-        set(Calendar.MILLISECOND, if (endOfDay) 999 else 0)
-    }.timeInMillis
+    private fun dayBoundary(year: Int, month: Int, day: Int, endOfDay: Boolean): Long =
+        DateRangeCalculator.dayBoundary(year, month, day, endOfDay)
 
     private fun formatPeriod(fromMillis: Long?, toMillis: Long?): String {
         if (fromMillis == null) return "كل السجل"
@@ -481,76 +461,102 @@ class MainActivity : AppCompatActivity() {
         val content = layoutInflater.inflate(R.layout.sheet_operation_filters, null)
         sheet.setContentView(content)
 
+        var draftDays = operationDays
+        var draftFromMillis = operationFromMillis
+        var draftToMillis = operationToMillis
+        var draftMonthFilter = operationMonthFilter
+        var draftCompany = operationCompany
+        var draftSender = operationSender
+        var draftCategory = operationCategory
+        var draftReviewOnly = operationReviewOnly
+        var draftCustodyOnly = operationCustodyOnly
+        var draftBodyKeywords = operationBodyKeywords
+        var draftScopeLabel = operationScopeLabel
+
         fun choosePeriod(days: Int? = null, month: CalendarMonthFilter? = null) {
-            operationDays = days
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = month
+            draftDays = days
+            draftFromMillis = null
+            draftToMillis = null
+            draftMonthFilter = month
+        }
+        fun clearSpecialScope() {
+            draftScopeLabel = null
+            draftCustodyOnly = false
+            draftBodyKeywords = emptyList()
+        }
+        fun applyDraft() {
+            operationDays = draftDays
+            operationFromMillis = draftFromMillis
+            operationToMillis = draftToMillis
+            operationMonthFilter = draftMonthFilter
+            operationCompany = draftCompany
+            operationSender = draftSender
+            operationCategory = draftCategory
+            operationReviewOnly = draftReviewOnly
+            operationCustodyOnly = draftCustodyOnly
+            operationBodyKeywords = draftBodyKeywords
+            operationScopeLabel = draftScopeLabel
         }
         content.findViewById<Chip>(R.id.sheetPeriodAll).setOnClickListener { choosePeriod() }
         content.findViewById<Chip>(R.id.sheetPeriodThisMonth).setOnClickListener { choosePeriod(month = CalendarMonthFilter.THIS_MONTH) }
         content.findViewById<Chip>(R.id.sheetPeriodLastMonth).setOnClickListener { choosePeriod(month = CalendarMonthFilter.LAST_MONTH) }
         content.findViewById<Chip>(R.id.sheetPeriod7Days).setOnClickListener { choosePeriod(days = 7) }
         content.findViewById<Chip>(R.id.sheetPeriod30Days).setOnClickListener { choosePeriod(days = 30) }
-        content.findViewById<Chip>(R.id.sheetPeriodAll).isChecked = operationDays == null && operationFromMillis == null && operationMonthFilter == null
-        content.findViewById<Chip>(R.id.sheetPeriodThisMonth).isChecked = operationMonthFilter == CalendarMonthFilter.THIS_MONTH
-        content.findViewById<Chip>(R.id.sheetPeriodLastMonth).isChecked = operationMonthFilter == CalendarMonthFilter.LAST_MONTH
-        content.findViewById<Chip>(R.id.sheetPeriod7Days).isChecked = operationDays == 7
-        content.findViewById<Chip>(R.id.sheetPeriod30Days).isChecked = operationDays == 30
-        content.findViewById<Chip>(R.id.sheetReviewChip).isChecked = operationReviewOnly
-        content.findViewById<Chip>(R.id.sheetReviewChip).setOnClickListener { chip -> operationReviewOnly = (chip as Chip).isChecked }
+        content.findViewById<Chip>(R.id.sheetPeriodAll).isChecked = draftDays == null && draftFromMillis == null && draftMonthFilter == null
+        content.findViewById<Chip>(R.id.sheetPeriodThisMonth).isChecked = draftMonthFilter == CalendarMonthFilter.THIS_MONTH
+        content.findViewById<Chip>(R.id.sheetPeriodLastMonth).isChecked = draftMonthFilter == CalendarMonthFilter.LAST_MONTH
+        content.findViewById<Chip>(R.id.sheetPeriod7Days).isChecked = draftDays == 7
+        content.findViewById<Chip>(R.id.sheetPeriod30Days).isChecked = draftDays == 30
+        content.findViewById<Chip>(R.id.sheetReviewChip).isChecked = draftReviewOnly
+        content.findViewById<Chip>(R.id.sheetReviewChip).setOnClickListener { chip -> draftReviewOnly = (chip as Chip).isChecked }
 
         renderOperationChips(
             content.findViewById(R.id.sheetCompanyChips),
             "كل الجهات والحسابات",
             database.companies().map { it.name },
-            operationCompany,
+            draftCompany,
         ) {
-            operationCompany = it
-            operationScopeLabel = null
-            operationCustodyOnly = false
-            operationBodyKeywords = emptyList()
+            draftCompany = it
+            clearSpecialScope()
         }
         renderOperationChips(
             content.findViewById(R.id.sheetBankChips),
             "كل البنوك والمرسلين",
             database.sendersWithEvents(),
-            operationSender,
+            draftSender,
         ) {
-            operationSender = it
-            operationScopeLabel = null
-            operationCustodyOnly = false
-            operationBodyKeywords = emptyList()
+            draftSender = it
+            clearSpecialScope()
         }
         renderOperationChips(
             content.findViewById(R.id.sheetCategoryChips),
             "كل الأنواع",
             database.categoriesWithEvents(),
-            operationCategory,
+            draftCategory,
         ) {
-            operationCategory = it
-            operationScopeLabel = null
-            operationCustodyOnly = false
-            operationBodyKeywords = emptyList()
+            draftCategory = it
+            clearSpecialScope()
         }
 
         content.findViewById<Button>(R.id.sheetClearFilters).setOnClickListener {
-            operationDays = null
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = null
-            operationCompany = null
-            operationSender = null
-            operationCategory = null
-            operationReviewOnly = false
-            operationCustodyOnly = false
-            operationBodyKeywords = emptyList()
-            operationScopeLabel = null
+            draftDays = null
+            draftFromMillis = null
+            draftToMillis = null
+            draftMonthFilter = null
+            draftCompany = null
+            draftSender = null
+            draftCategory = null
+            draftReviewOnly = false
+            draftCustodyOnly = false
+            draftBodyKeywords = emptyList()
+            draftScopeLabel = null
+            applyDraft()
             operationSearch.setText("")
             renderOperations()
             sheet.dismiss()
         }
         content.findViewById<Button>(R.id.sheetApplyFilters).setOnClickListener {
+            applyDraft()
             renderOperations()
             sheet.dismiss()
         }
@@ -565,6 +571,7 @@ class MainActivity : AppCompatActivity() {
         onSelect: (String?) -> Unit,
     ) {
         group.removeAllViews()
+        group.isSelectionRequired = true
         (listOf<String?>(null) + values).forEach { value ->
             group.addView(Chip(this).apply {
                 text = value ?: allLabel
@@ -573,13 +580,8 @@ class MainActivity : AppCompatActivity() {
                 setEnsureMinTouchTargetSize(false)
                 isCheckable = true
                 isChecked = value == selected
-                setOnClickListener {
-                    if (value == selected) {
-                        isChecked = true
-                    } else {
-                        onSelect(value)
-                        renderOperations()
-                    }
+                setOnCheckedChangeListener { _, checked ->
+                    if (checked) onSelect(value)
                 }
             })
         }
