@@ -57,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var operationsAdapter: OperationsAdapter
     private lateinit var operationFilterSummary: TextView
     private lateinit var operationsEmpty: TextView
+    private lateinit var operationAdvancedFilters: View
+    private lateinit var operationFiltersToggle: Button
     private lateinit var operationCompanyChips: ChipGroup
     private lateinit var operationBankChips: ChipGroup
     private lateinit var operationCategoryChips: ChipGroup
@@ -70,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private var operationSender: String? = null
     private var operationCategory: String? = null
     private var operationReviewOnly = false
+    private var operationFiltersExpanded = false
 
     override fun attachBaseContext(newBase: Context) {
         val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
@@ -100,6 +103,8 @@ class MainActivity : AppCompatActivity() {
         custodySummary = findViewById(R.id.custodySummary)
         operationFilterSummary = findViewById(R.id.operationsFilterSummary)
         operationsEmpty = findViewById(R.id.operationsEmpty)
+        operationAdvancedFilters = findViewById(R.id.operationAdvancedFilters)
+        operationFiltersToggle = findViewById(R.id.operationFiltersToggle)
         operationCompanyChips = findViewById(R.id.operationCompanyChips)
         operationBankChips = findViewById(R.id.operationBankChips)
         operationCategoryChips = findViewById(R.id.operationCategoryChips)
@@ -240,6 +245,10 @@ class MainActivity : AppCompatActivity() {
             operationReviewOnly = (chip as Chip).isChecked
             renderOperations()
         }
+        operationFiltersToggle.setOnClickListener {
+            operationFiltersExpanded = !operationFiltersExpanded
+            renderOperationFilterControls()
+        }
         operationSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -249,6 +258,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderOperations() {
         val database = LedgerDatabase(this)
+        renderOperationFilterControls()
         findViewById<Chip>(R.id.operationReviewChip).isChecked = operationReviewOnly
         renderOperationChips(
             operationCompanyChips,
@@ -287,6 +297,16 @@ class MainActivity : AppCompatActivity() {
         operationFilterSummary.text = "عرض ${events.size} عملية · ${operationCompany ?: "كل الشركات"} · $window$review · الحد الأقصى 200"
     }
 
+    private fun renderOperationFilterControls() {
+        operationAdvancedFilters.visibility = if (operationFiltersExpanded) View.VISIBLE else View.GONE
+        val activeFilters = listOf(operationCompany, operationSender, operationCategory).count { it != null }
+        operationFiltersToggle.text = when {
+            operationFiltersExpanded -> "إخفاء الفلاتر"
+            activeFilters > 0 -> "فلاتر ($activeFilters)"
+            else -> "فلاتر"
+        }
+    }
+
     private fun renderOperationChips(
         group: ChipGroup,
         allLabel: String,
@@ -298,6 +318,9 @@ class MainActivity : AppCompatActivity() {
         (listOf<String?>(null) + values).forEach { value ->
             group.addView(Chip(this).apply {
                 text = value ?: allLabel
+                textSize = 13f
+                chipMinHeight = 36f * resources.displayMetrics.density
+                setEnsureMinTouchTargetSize(false)
                 isCheckable = true
                 isChecked = value == selected
                 setOnClickListener {
