@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0-calendar"
+        versionCode = 6
+        versionName = "0.6.0-sender-picker"
     }
 
     buildTypes {

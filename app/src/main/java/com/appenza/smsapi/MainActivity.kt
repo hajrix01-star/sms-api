@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import java.text.DateFormat
@@ -26,7 +27,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var input: EditText
     private lateinit var history: TextView
     private lateinit var importUntil: EditText
+    private lateinit var importResult: TextView
     private val senders = mutableListOf<String>()
+    private var readAction = ReadAction.IMPORT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         input = findViewById(R.id.senderInput)
         history = findViewById(R.id.receiptHistory)
         importUntil = findViewById(R.id.importUntil)
+        importResult = findViewById(R.id.importResult)
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -49,7 +53,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         findViewById<Button>(R.id.enable).setOnClickListener { if (saveSenders()) requestReceiveSmsPermission() }
-        findViewById<Button>(R.id.importHistory).setOnClickListener { if (saveSenders()) requestReadSmsPermission() }
+        findViewById<Button>(R.id.importHistory).setOnClickListener { if (saveSenders()) requestReadSmsPermission(ReadAction.IMPORT) }
+        findViewById<Button>(R.id.pickSenders).setOnClickListener { requestReadSmsPermission(ReadAction.PICK_SENDERS) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit().putBoolean(RelayStore.ENABLED, false).apply()
@@ -94,9 +99,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestReadSmsPermission() {
+    private fun requestReadSmsPermission(action: ReadAction) {
+        readAction = action
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
-            importHistory()
+            runReadAction()
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS), REQUEST_READ_SMS)
         }
@@ -107,7 +113,14 @@ class MainActivity : AppCompatActivity() {
         val granted = results.isNotEmpty() && results.all { it == PackageManager.PERMISSION_GRANTED }
         when (requestCode) {
             REQUEST_RECEIVE_SMS -> if (granted) enable() else Toast.makeText(this, "لن يعمل الاستقبال المباشر بدون إذن SMS", Toast.LENGTH_LONG).show()
-            REQUEST_READ_SMS -> if (granted) importHistory() else Toast.makeText(this, "لن يعمل الاستيراد بدون إذن قراءة الرسائل", Toast.LENGTH_LONG).show()
+            REQUEST_READ_SMS -> if (granted) runReadAction() else Toast.makeText(this, "لن يعمل هذا الإجراء بدون إذن قراءة الرسائل", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun runReadAction() {
+        when (readAction) {
+            ReadAction.IMPORT -> importHistory()
+            ReadAction.PICK_SENDERS -> showSenderPicker()
         }
     }
 
@@ -126,6 +139,8 @@ class MainActivity : AppCompatActivity() {
         Thread {
             val result = runCatching {
                 val matches = mutableListOf<HistoricalMessage>()
+                val visibleSenders = linkedSetOf<String>()
+                var scanned = 0
                 val cursor = contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
@@ -137,11 +152,13 @@ class MainActivity : AppCompatActivity() {
                     val addressColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
                     val bodyColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
                     val dateColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
-                    while (cursor.moveToNext() && matches.size < MAX_IMPORT) {
+                    while (cursor.moveToNext() && scanned < MAX_SCAN) {
+                        scanned++
                         val sender = cursor.getString(addressColumn).orEmpty()
                         val body = cursor.getString(bodyColumn).orEmpty()
                         val receivedAt = cursor.getLong(dateColumn)
-                        if (RelayStore.matchesSender(sender, allowedSenders)) {
+                        if (sender.isNotBlank() && visibleSenders.size < MAX_VISIBLE_SENDERS) visibleSenders += sender
+                        if (matches.size < MAX_IMPORT && RelayStore.matchesSender(sender, allowedSenders)) {
                             matches += HistoricalMessage(sender, body, receivedAt)
                         }
                     }
@@ -151,19 +168,23 @@ class MainActivity : AppCompatActivity() {
                     val storedBody = if (RelayStore.isOtp(message.body)) "محتوى مخفي لحماية رمز التحقق" else message.body
                     RelayStore.recordReceipt(this, message.sender, storedBody, message.receivedAt, outcome)
                 }
-                matches.size
+                ImportResult(matches.size, scanned, visibleSenders.toList())
             }
             runOnUiThread {
-                result.onSuccess { imported ->
+                result.onSuccess { import ->
                     render()
-                    val message = if (imported == 0) {
-                        "لم يتم العثور على رسائل مطابقة قبل هذا التاريخ"
+                    val message = if (import.imported == 0) {
+                        "فُحصت ${import.scanned} رسالة ولم تطابق «${senders.joinToString("، ")}" +
+                            "». المرسلون المرئيون: ${import.visibleSenders.ifEmpty { listOf("لا توجد") }.joinToString("، ")}"
                     } else {
-                        "تم استيراد $imported رسالة مطابقة"
+                        "تم استيراد ${import.imported} رسالة مطابقة بعد فحص ${import.scanned} رسالة"
                     }
+                    importResult.text = message
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    Toast.makeText(this, "تعذر استيراد الرسائل: ${it.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+                    val message = "تعذر استيراد الرسائل: ${it.message ?: "خطأ غير معروف"}"
+                    importResult.text = message
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
@@ -197,6 +218,55 @@ class MainActivity : AppCompatActivity() {
         ).show()
     }
 
+    private fun showSenderPicker() {
+        Thread {
+            val result = runCatching {
+                val discovered = linkedSetOf<String>()
+                val cursor = contentResolver.query(
+                    Telephony.Sms.Inbox.CONTENT_URI,
+                    arrayOf(Telephony.Sms.ADDRESS),
+                    null,
+                    null,
+                    "${Telephony.Sms.DATE} DESC",
+                ) ?: throw IllegalStateException("تعذر فتح سجل الرسائل")
+                cursor.use {
+                    val addressColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+                    var scanned = 0
+                    while (cursor.moveToNext() && scanned < MAX_SCAN && discovered.size < MAX_PICKABLE_SENDERS) {
+                        scanned++
+                        cursor.getString(addressColumn)?.trim()?.takeIf(String::isNotEmpty)?.let(discovered::add)
+                    }
+                }
+                discovered.toList()
+            }
+            runOnUiThread {
+                result.onSuccess(::displaySenderPicker).onFailure {
+                    Toast.makeText(this, "تعذر فتح قائمة المرسلين: ${it.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun displaySenderPicker(discovered: List<String>) {
+        if (discovered.isEmpty()) {
+            Toast.makeText(this, "لم يعثر التطبيق على مرسلين في سجل الرسائل", Toast.LENGTH_LONG).show()
+            return
+        }
+        val chosen = discovered.map { candidate -> senders.any { it.equals(candidate, ignoreCase = true) } }.toBooleanArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("اختر المرسلين من سجل SMS")
+            .setMultiChoiceItems(discovered.toTypedArray(), chosen) { _, index, checked -> chosen[index] = checked }
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("إضافة المحدد") { _, _ ->
+                discovered.forEachIndexed { index, sender ->
+                    if (chosen[index] && senders.none { it.equals(sender, ignoreCase = true) }) senders += sender
+                }
+                RelayStore.saveSenders(this, senders)
+                render()
+            }
+            .show()
+    }
+
     private fun render() {
         chips.removeAllViews()
         senders.forEach { sender ->
@@ -227,7 +297,12 @@ class MainActivity : AppCompatActivity() {
         const val REQUEST_RECEIVE_SMS = 8
         const val REQUEST_READ_SMS = 9
         const val MAX_IMPORT = 500
+        const val MAX_SCAN = 2_000
+        const val MAX_VISIBLE_SENDERS = 12
+        const val MAX_PICKABLE_SENDERS = 80
     }
 
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
+    private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>)
+    private enum class ReadAction { IMPORT, PICK_SENDERS }
 }

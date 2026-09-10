@@ -68,15 +68,17 @@ object RelayStore {
     }
 
     fun matchesSender(actualSender: String, configuredSenders: List<String>): Boolean {
-        val normalizedActual = actualSender.trim().lowercase()
+        val normalizedActual = canonical(actualSender)
         val actualDigits = actualSender.filter(Char::isDigit)
         return configuredSenders.any { configured ->
-            val normalizedConfigured = configured.trim().lowercase()
+            val normalizedConfigured = canonical(configured)
             val configuredDigits = configured.filter(Char::isDigit)
-            (normalizedConfigured.isNotEmpty() && normalizedActual.contains(normalizedConfigured)) ||
+            (configured.any(Char::isLetter) && normalizedConfigured.isNotEmpty() && normalizedActual.contains(normalizedConfigured)) ||
                 (configuredDigits.length >= 6 && actualDigits.endsWith(configuredDigits))
         }
     }
+
+    private fun canonical(value: String) = value.lowercase().filter(Char::isLetterOrDigit)
 
     private fun receiptsJson(context: Context) = JSONArray(preferences(context).getString(RECEIPTS, "[]") ?: "[]")
 
