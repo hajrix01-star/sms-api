@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#111018"
+    android:layoutDirection="rtl">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ScrollView android:id="@+id/dashboardPage" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="السجل البنكي" android:textColor="#F4EFF4" android:textSize="30sp" android:textStyle="bold" />
+                <TextView android:id="@+id/dashboardStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="#CFC7D2" android:textSize="15sp" />
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" app:cardBackgroundColor="#1D1B24" app:cardCornerRadius="18dp" app:strokeColor="#3A3540" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:text="نظرة سريعة" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#F4EFF4" android:textSize="19sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/dashboardSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="#DDF7EA" android:textSize="17sp" android:lineSpacingExtra="8dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" app:cardBackgroundColor="#173A2E" app:cardCornerRadius="18dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:text="الرسوم البيانية التفصيلية ستعتمد على العمليات بعد ربط الحسابات والبطاقات بالشركات. لا نعرض أرقامًا مالية مضللة قبل اكتمال الربط." android:textColor="#E4F5EA" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView android:id="@+id/operationsPage" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="العمليات" android:textColor="#F4EFF4" android:textSize="30sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="أحدث العمليات المحلية. في المرحلة التالية نضيف فلاتر التاريخ والشركة والحساب والنوع." android:textColor="#CFC7D2" android:textSize="15sp" />
+                <TextView android:id="@+id/operationsList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:padding="16dp" android:textColor="#E4DEE7" android:textSize="14sp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView android:id="@+id/accountsPage" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="الحسابات والبطاقات" android:textColor="#F4EFF4" android:textSize="30sp" android:textStyle="bold" />
+                <TextView android:id="@+id/accountsOverview" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="#CFC7D2" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/openAccountManager" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="22dp" android:text="ربط الحسابات والبطاقات المكتشفة" android:textColor="#FFFFFF" app:backgroundTint="#16805D" app:cornerRadius="16dp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <FrameLayout android:id="@+id/settingsPage" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+            <include layout="@layout/activity_main" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="68dp" android:gravity="center" android:orientation="horizontal" android:background="#1D1B24">
+        <com.google.android.material.button.MaterialButton android:id="@+id/navDashboard" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الرئيسية" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navOperations" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="العمليات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navAccounts" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الحسابات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/navSettings" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="الإعدادات" android:textColor="#DDF7EA" app:backgroundTint="#1D1B24" />
+    </LinearLayout>
+</LinearLayout>

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -37,12 +38,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recoveryStatus: TextView
     private lateinit var companyDirectory: TextView
     private lateinit var instrumentDirectory: TextView
+    private lateinit var dashboardStatus: TextView
+    private lateinit var dashboardSummary: TextView
+    private lateinit var operationsList: TextView
+    private lateinit var accountsOverview: TextView
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_shell)
 
         chips = findViewById(R.id.senderChips)
         status = findViewById(R.id.status)
@@ -53,6 +58,10 @@ class MainActivity : AppCompatActivity() {
         recoveryStatus = findViewById(R.id.recoveryStatus)
         companyDirectory = findViewById(R.id.companyDirectory)
         instrumentDirectory = findViewById(R.id.instrumentDirectory)
+        dashboardStatus = findViewById(R.id.dashboardStatus)
+        dashboardSummary = findViewById(R.id.dashboardSummary)
+        operationsList = findViewById(R.id.operationsList)
+        accountsOverview = findViewById(R.id.accountsOverview)
         senders.addAll(RelayStore.senders(this))
 
         findViewById<Button>(R.id.addSender).setOnClickListener {
@@ -83,6 +92,11 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.addCompany).setOnClickListener { showAddCompanyDialog() }
         findViewById<Button>(R.id.manageInstruments).setOnClickListener { showInstrumentManager() }
+        findViewById<Button>(R.id.openAccountManager).setOnClickListener { showInstrumentManager() }
+        findViewById<Button>(R.id.navDashboard).setOnClickListener { showPage(R.id.dashboardPage) }
+        findViewById<Button>(R.id.navOperations).setOnClickListener { showPage(R.id.operationsPage) }
+        findViewById<Button>(R.id.navAccounts).setOnClickListener { showPage(R.id.accountsPage) }
+        findViewById<Button>(R.id.navSettings).setOnClickListener { showPage(R.id.settingsPage) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -447,6 +461,13 @@ class MainActivity : AppCompatActivity() {
             }.show()
     }
 
+    private fun showPage(pageId: Int) {
+        listOf(R.id.dashboardPage, R.id.operationsPage, R.id.accountsPage, R.id.settingsPage).forEach { id ->
+            findViewById<View>(id).visibility = if (id == pageId) View.VISIBLE else View.GONE
+        }
+        render()
+    }
+
     private fun showInstrumentManager() {
         val database = LedgerDatabase(this)
         val companies = database.companies()
@@ -531,6 +552,13 @@ class MainActivity : AppCompatActivity() {
         val instruments = database.instruments()
         val linked = instruments.count { it.companyName != null }
         instrumentDirectory.text = if (instruments.isEmpty()) "لا توجد أدوات مالية مكتشفة بعد." else "تم اكتشاف ${instruments.size} حساب/بطاقة؛ المرتبط منها $linked، وغير المرتبط ${instruments.size - linked}."
+        val summary = RelayStore.summary(this)
+        dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
+        dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nغير مصنفة: ${summary.unknown}"
+        operationsList.text = RelayStore.receipts(this).joinToString("\n\n") { receipt ->
+            "${receipt.outcome} · ${receipt.sender}\n${formatter.format(Date(receipt.receivedAt))}\n${receipt.preview}"
+        }.ifBlank { "لا توجد عمليات بعد. استورد الرسائل أو نفّذ فحص الآن." }
+        accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."
     }
 
     private companion object {
