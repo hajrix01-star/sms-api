@@ -17,6 +17,7 @@ object RelayStore {
     const val RECOVERY_ENABLED = "recovery_enabled"
     const val RECOVERY_LAST_AT = "recovery_last_at"
     const val RECOVERY_LAST_IMPORTED = "recovery_last_imported"
+    const val DARK_MODE = "dark_mode"
 
     fun preferences(context: Context) = context.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
 

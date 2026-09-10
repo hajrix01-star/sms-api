@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#111018"
+    android:background="@color/page_background"
     android:fillViewport="true"
     android:layoutDirection="rtl">
 
@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:letterSpacing="0.04"
             android:text="SMS API"
-            android:textColor="#F4EFF4"
+            android:textColor="@color/text_primary"
             android:textDirection="ltr"
             android:textSize="32sp"
             android:textStyle="bold" />
@@ -28,17 +28,17 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/app_subtitle"
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="16sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            app:cardBackgroundColor="#173A2E"
+            app:cardBackgroundColor="@color/success_container"
             app:cardCornerRadius="18dp"
             app:cardElevation="0dp"
-            app:strokeColor="#29634E"
+            app:strokeColor="@color/success_outline"
             app:strokeWidth="1dp">
 
             <TextView
@@ -47,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:padding="18dp"
                 android:text="الحالة: إذن SMS مطلوب للاختبار"
-                android:textColor="#E4F5EA"
+                android:textColor="@color/text_on_success"
                 android:textSize="17sp"
                 android:textStyle="bold" />
         </com.google.android.material.card.MaterialCardView>
@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="مرسلو الاختبار"
-            android:textColor="#F4EFF4"
+            android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="للبنوك: اكتب الاسم كما يظهر في SMS. للأشخاص: اكتب آخر 6–8 أرقام من الرقم، وليس اسم جهة الاتصال."
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <LinearLayout
@@ -82,16 +82,16 @@
                 android:layout_weight="1"
                 android:hint="اسم أو رقم المرسل"
                 app:boxBackgroundMode="outline"
-                app:boxStrokeColor="#68B497"
-                app:hintTextColor="#CFC7D2">
+                app:boxStrokeColor="@color/accent"
+                app:hintTextColor="@color/text_secondary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/senderInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
-                    android:textColor="#F4EFF4"
-                    android:textColorHint="#89818D" />
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -100,8 +100,8 @@
                 android:layout_height="56dp"
                 android:layout_marginStart="10dp"
                 android:text="إضافة"
-                android:textColor="#FFFFFF"
-                app:backgroundTint="#16805D"
+                android:textColor="@color/on_primary"
+                app:backgroundTint="@color/primary_action"
                 app:cornerRadius="16dp" />
         </LinearLayout>
 
@@ -119,20 +119,20 @@
             android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:text="اختيار مرسلين من رسائل الجهاز"
-            android:textColor="#DDF7EA"
-            app:backgroundTint="#244A3C"
+            android:textColor="@color/text_accent"
+            app:backgroundTint="@color/surface_accent"
             app:cornerRadius="16dp"
-            app:strokeColor="#68B497"
+            app:strokeColor="@color/accent"
             app:strokeWidth="1dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            app:cardBackgroundColor="#1D1B24"
+            app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="18dp"
             app:cardElevation="0dp"
-            app:strokeColor="#3A3540"
+            app:strokeColor="@color/outline"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -145,7 +145,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="الشركات والحسابات والبطاقات"
-                    android:textColor="#F4EFF4"
+                    android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -154,7 +154,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textColor="#CFC7D2"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -163,8 +163,8 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="12dp"
                     android:text="إضافة شركة أو نطاق شخصي"
-                    android:textColor="#DDF7EA"
-                    app:backgroundTint="#244A3C"
+                    android:textColor="@color/text_accent"
+                    app:backgroundTint="@color/surface_accent"
                     app:cornerRadius="14dp" />
 
                 <TextView
@@ -172,7 +172,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:textColor="#CFC7D2"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -181,8 +181,8 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="12dp"
                     android:text="ربط الحسابات والبطاقات المكتشفة"
-                    android:textColor="#FFFFFF"
-                    app:backgroundTint="#16805D"
+                    android:textColor="@color/on_primary"
+                    app:backgroundTint="@color/primary_action"
                     app:cornerRadius="14dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -191,10 +191,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            app:cardBackgroundColor="#1D1B24"
+            app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="18dp"
             app:cardElevation="0dp"
-            app:strokeColor="#3A3540"
+            app:strokeColor="@color/outline"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -207,7 +207,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="وضع الاختبار المحلي"
-                    android:textColor="#F4EFF4"
+                    android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -217,7 +217,7 @@
                     android:layout_marginTop="6dp"
                     android:lineSpacingExtra="3dp"
                     android:text="لا يوجد API ولا اتصال إنترنت في هذه النسخة. عند وصول رسالة جديدة يوقظ أندرويد التطبيق لثوانٍ فقط؛ لا توجد خدمة تعمل باستمرار."
-                    android:textColor="#CFC7D2"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -228,9 +228,9 @@
             android:layout_height="56dp"
             android:layout_marginTop="20dp"
             android:text="تفعيل استقبال SMS للاختبار"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/on_primary"
             android:textSize="16sp"
-            app:backgroundTint="#16805D"
+            app:backgroundTint="@color/primary_action"
             app:cornerRadius="16dp" />
 
         <TextView
@@ -238,7 +238,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="حماية من فقد الرسائل"
-            android:textColor="#F4EFF4"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -248,7 +248,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -257,10 +257,10 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="تفعيل/إيقاف فحص التعافي الاحتياطي"
-            android:textColor="#DDF7EA"
-            app:backgroundTint="#244A3C"
+            android:textColor="@color/text_accent"
+            app:backgroundTint="@color/surface_accent"
             app:cornerRadius="16dp"
-            app:strokeColor="#68B497"
+            app:strokeColor="@color/accent"
             app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -269,10 +269,10 @@
             android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:text="فحص الآن لآخر 7 أيام"
-            android:textColor="#DDF7EA"
-            app:backgroundTint="#244A3C"
+            android:textColor="@color/text_accent"
+            app:backgroundTint="@color/surface_accent"
             app:cornerRadius="16dp"
-            app:strokeColor="#68B497"
+            app:strokeColor="@color/accent"
             app:strokeWidth="1dp" />
 
         <TextView
@@ -280,7 +280,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="استيراد الرسائل السابقة"
-            android:textColor="#F4EFF4"
+            android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textStyle="bold" />
 
@@ -289,7 +289,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="يقرأ فقط الرسائل المطابقة للمرسلين أعلاه، حتى نهاية التاريخ الذي تحدده."
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <com.google.android.material.textfield.TextInputLayout
@@ -298,8 +298,8 @@
             android:layout_marginTop="12dp"
             android:hint="اختر تاريخ النهاية من التقويم"
             app:boxBackgroundMode="outline"
-            app:boxStrokeColor="#68B497"
-            app:hintTextColor="#CFC7D2">
+            app:boxStrokeColor="@color/accent"
+            app:hintTextColor="@color/text_secondary">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/importUntil"
@@ -308,8 +308,8 @@
                 android:clickable="true"
                 android:focusable="false"
                 android:inputType="none"
-                android:textColor="#F4EFF4"
-                android:textColorHint="#89818D"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_hint"
                 android:textDirection="ltr" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -319,10 +319,10 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="استيراد الرسائل المطابقة"
-            android:textColor="#DDF7EA"
-            app:backgroundTint="#244A3C"
+            android:textColor="@color/text_accent"
+            app:backgroundTint="@color/surface_accent"
             app:cornerRadius="16dp"
-            app:strokeColor="#68B497"
+            app:strokeColor="@color/accent"
             app:strokeWidth="1dp" />
 
         <TextView
@@ -331,7 +331,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:lineSpacingExtra="3dp"
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 
         <TextView
@@ -339,7 +339,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="عينة القواعد"
-            android:textColor="#F4EFF4"
+            android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textStyle="bold" />
 
@@ -349,7 +349,7 @@
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
             android:text="يصدر آخر 600 رسالة غير أمنية لكل مرسل محدد في JSON. رسائل OTP والأمن تُستبعد بالكامل، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
-            android:textColor="#CFC7D2"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -358,8 +358,8 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="تصدير عينة JSON (600 لكل بنك)"
-            android:textColor="#FFFFFF"
-            app:backgroundTint="#16805D"
+            android:textColor="@color/on_primary"
+            app:backgroundTint="@color/primary_action"
             app:cornerRadius="16dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -368,10 +368,10 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="إضافة حدث اختبار محلي"
-            android:textColor="#DDF7EA"
-            app:backgroundTint="#244A3C"
+            android:textColor="@color/text_accent"
+            app:backgroundTint="@color/surface_accent"
             app:cornerRadius="16dp"
-            app:strokeColor="#68B497"
+            app:strokeColor="@color/accent"
             app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -380,10 +380,10 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="إيقاف الاستقبال"
-            android:textColor="#F6D9DB"
-            app:backgroundTint="#392426"
+            android:textColor="@color/text_danger"
+            app:backgroundTint="@color/danger_container"
             app:cornerRadius="16dp"
-            app:strokeColor="#8D5157"
+            app:strokeColor="@color/danger_outline"
             app:strokeWidth="1dp" />
 
         <LinearLayout
@@ -398,7 +398,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="سجل الاستلام"
-                android:textColor="#F4EFF4"
+                android:textColor="@color/text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
@@ -407,8 +407,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:text="مسح السجل"
-                android:textColor="#CFC7D2"
-                app:backgroundTint="#27232D"
+                android:textColor="@color/text_secondary"
+                app:backgroundTint="@color/surface_muted"
                 app:cornerRadius="14dp" />
         </LinearLayout>
 
@@ -418,7 +418,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:padding="16dp"
-            android:textColor="#E4DEE7"
+            android:textColor="@color/text_body"
             android:textSize="14sp" />
 
         <TextView
@@ -428,7 +428,7 @@
             android:layout_marginBottom="12dp"
             android:lineSpacingExtra="4dp"
             android:text="يحفظ التطبيق السجل المالي محليًا. رسائل OTP والأمن لا تُحفظ ولا تُصدّر. الاستيراد التاريخي يدوي؛ وفحص التعافي الاحتياطي يعمل كل 6 ساعات دون خدمة دائمة."
-            android:textColor="#B8B0BC"
+            android:textColor="@color/text_muted"
             android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

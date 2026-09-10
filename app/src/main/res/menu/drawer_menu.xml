@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/menuDashboard"
+            android:checked="true"
+            android:icon="@drawable/ic_dashboard"
+            android:title="الرئيسية" />
+    </group>
+
+    <item android:title="السجل المالي">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/menuOperations"
+                    android:icon="@drawable/ic_receipt"
+                    android:title="العمليات" />
+                <item
+                    android:id="@+id/menuAccounts"
+                    android:icon="@drawable/ic_account_balance"
+                    android:title="الحسابات والبطاقات" />
+            </group>
+        </menu>
+    </item>
+
+    <item android:title="الإدارة">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/menuSettings"
+                    android:icon="@drawable/ic_settings"
+                    android:title="الإعدادات والاستيراد" />
+            </group>
+        </menu>
+    </item>
+</menu>

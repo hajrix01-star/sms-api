@@ -3,6 +3,7 @@ package com.appenza.smsapi
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -13,14 +14,20 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.navigation.NavigationView
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -47,10 +54,20 @@ class MainActivity : AppCompatActivity() {
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
 
+    override fun attachBaseContext(newBase: Context) {
+        val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
+            .getBoolean(RelayStore.DARK_MODE, true)
+        AppCompatDelegate.setDefaultNightMode(
+            if (darkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO,
+        )
+        super.attachBaseContext(newBase)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
         applySystemBarInsets()
+        setupDrawer()
 
         chips = findViewById(R.id.senderChips)
         status = findViewById(R.id.status)
@@ -96,10 +113,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.addCompany).setOnClickListener { showAddCompanyDialog() }
         findViewById<Button>(R.id.manageInstruments).setOnClickListener { showInstrumentManager() }
         findViewById<Button>(R.id.openAccountManager).setOnClickListener { showInstrumentManager() }
-        findViewById<Button>(R.id.navDashboard).setOnClickListener { showPage(R.id.dashboardPage) }
-        findViewById<Button>(R.id.navOperations).setOnClickListener { showPage(R.id.operationsPage) }
-        findViewById<Button>(R.id.navAccounts).setOnClickListener { showPage(R.id.accountsPage) }
-        findViewById<Button>(R.id.navSettings).setOnClickListener { showPage(R.id.settingsPage) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -132,7 +145,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applySystemBarInsets() {
         val root = findViewById<View>(R.id.shellRoot)
-        val topNavigation = findViewById<View>(R.id.topNavigation)
+        val topNavigation = findViewById<View>(R.id.topAppBar)
         val pages = findViewById<View>(R.id.pageContainer)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val safeArea = insets.getInsets(
@@ -153,6 +166,39 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         ViewCompat.requestApplyInsets(root)
+    }
+
+    private fun setupDrawer() {
+        val drawer = findViewById<DrawerLayout>(R.id.drawerLayout)
+        val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+        val navigation = findViewById<NavigationView>(R.id.navigationView)
+
+        toolbar.setNavigationOnClickListener { drawer.openDrawer(GravityCompat.END) }
+        navigation.setNavigationItemSelectedListener { item ->
+            val page = when (item.itemId) {
+                R.id.menuDashboard -> R.id.dashboardPage
+                R.id.menuOperations -> R.id.operationsPage
+                R.id.menuAccounts -> R.id.accountsPage
+                R.id.menuSettings -> R.id.settingsPage
+                else -> null
+            }
+            if (page == null) {
+                false
+            } else {
+                showPage(page)
+                drawer.closeDrawer(GravityCompat.END)
+                true
+            }
+        }
+
+        val toggle = navigation.getHeaderView(0).findViewById<MaterialSwitch>(R.id.themeToggle)
+        toggle.isChecked = RelayStore.preferences(this).getBoolean(RelayStore.DARK_MODE, true)
+        toggle.setOnCheckedChangeListener { _, isDark ->
+            RelayStore.preferences(this).edit().putBoolean(RelayStore.DARK_MODE, isDark).apply()
+            AppCompatDelegate.setDefaultNightMode(
+                if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO,
+            )
+        }
     }
 
     override fun onResume() {
@@ -497,6 +543,14 @@ class MainActivity : AppCompatActivity() {
         listOf(R.id.dashboardPage, R.id.operationsPage, R.id.accountsPage, R.id.settingsPage).forEach { id ->
             findViewById<View>(id).visibility = if (id == pageId) View.VISIBLE else View.GONE
         }
+        val (title, menuItem) = when (pageId) {
+            R.id.dashboardPage -> "الرئيسية" to R.id.menuDashboard
+            R.id.operationsPage -> "العمليات" to R.id.menuOperations
+            R.id.accountsPage -> "الحسابات والبطاقات" to R.id.menuAccounts
+            else -> "الإعدادات والاستيراد" to R.id.menuSettings
+        }
+        findViewById<MaterialToolbar>(R.id.topAppBar).title = title
+        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(menuItem)
         render()
     }
 

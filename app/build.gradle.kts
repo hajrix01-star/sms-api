@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.11.2-adaptive-insets"
+        versionCode = 15
+        versionName = "0.12.0-navigation-drawer"
     }
 
     buildTypes {
@@ -38,5 +38,6 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.drawerlayout:drawerlayout:1.2.0")
     implementation("com.google.android.material:material:1.12.0")
 }
