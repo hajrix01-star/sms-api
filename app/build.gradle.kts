@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 34
-        versionName = "0.19.4-filter-draft-fix"
+        versionCode = 35
+        versionName = "0.19.5-arz-direction-indicators"
     }
 
     signingConfigs {
