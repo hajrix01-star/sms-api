@@ -106,6 +106,46 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         return writableDatabase.insertWithOnConflict("events", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1L
     }
 
+    /** Re-applies the current local parser and account/company rules without reading SMS again. */
+    fun reanalyzeAll(): Int {
+        val db = writableDatabase
+        var scanned = 0
+        db.beginTransaction()
+        try {
+            db.query(
+                "events",
+                arrayOf("id", "sender", "received_at", "body", "company_name", "custody_type"),
+                null, null, null, null, null,
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    scanned++
+                    val id = cursor.getLong(0)
+                    val sender = cursor.getString(1)
+                    val receivedAt = cursor.getLong(2)
+                    val body = cursor.getString(3)
+                    val currentCompany = cursor.getString(4)
+                    val currentCustody = cursor.getString(5)
+                    val parsed = BankEventParser.parse(sender, body, receivedAt)
+                    val inferredCompany = CompanyRules.inferCompany(sender, body)
+                    val values = ContentValues().apply {
+                        put("category", parsed.category)
+                        put("amount", parsed.amount)
+                        put("instrument", parsed.instrument)
+                        put("counterparty", parsed.counterparty)
+                        // Preserve a manual/company-directory association when no automatic rule matches.
+                        put("company_name", inferredCompany ?: currentCompany)
+                        put("custody_type", parsed.custodyType ?: currentCustody)
+                    }
+                    db.update("events", values, "id = ?", arrayOf(id.toString()))
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return scanned
+    }
+
     fun latest(limit: Int = 100): List<LedgerEvent> = readableDatabase.query(
         "events",
         arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body", "company_name", "custody_type"),

@@ -249,6 +249,15 @@ class MainActivity : AppCompatActivity() {
             operationFiltersExpanded = !operationFiltersExpanded
             renderOperationFilterControls()
         }
+        findViewById<Button>(R.id.operationReanalyze).setOnClickListener {
+            Thread {
+                val scanned = LedgerDatabase(this).reanalyzeAll()
+                runOnUiThread {
+                    render()
+                    Toast.makeText(this, "اكتملت إعادة تحليل $scanned عملية محلية", Toast.LENGTH_LONG).show()
+                }
+            }.start()
+        }
         operationSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
