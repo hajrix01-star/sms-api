@@ -33,7 +33,7 @@ data class CustodySummary(
 )
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 9) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 10) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -84,6 +84,10 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         }
         if (oldVersion < 9) {
             // SNB masks the Doha account as 078*409 in point-of-sale settlements.
+            backfillCompanyNames(db)
+        }
+        if (oldVersion < 10) {
+            // Link historic SNB settlement messages for Keeta, HungerStation and Jahez to Muallam.
             backfillCompanyNames(db)
         }
         seedCompanyDirectory(db)
