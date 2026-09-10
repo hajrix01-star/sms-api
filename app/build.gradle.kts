@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.15.0-osama-custody"
+        versionCode = 19
+        versionName = "0.16.0-review-queue"
     }
 
     buildTypes {

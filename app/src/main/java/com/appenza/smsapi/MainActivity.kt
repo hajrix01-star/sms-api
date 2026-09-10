@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var operationCompany: String? = null
     private var operationSender: String? = null
     private var operationCategory: String? = null
+    private var operationReviewOnly = false
 
     override fun attachBaseContext(newBase: Context) {
         val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
@@ -235,6 +236,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<Chip>(R.id.periodAll).setOnClickListener { operationDays = null; renderOperations() }
         findViewById<Chip>(R.id.period7Days).setOnClickListener { operationDays = 7; renderOperations() }
         findViewById<Chip>(R.id.period30Days).setOnClickListener { operationDays = 30; renderOperations() }
+        findViewById<Chip>(R.id.operationReviewChip).setOnClickListener { chip ->
+            operationReviewOnly = (chip as Chip).isChecked
+            renderOperations()
+        }
         operationSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -244,6 +249,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderOperations() {
         val database = LedgerDatabase(this)
+        findViewById<Chip>(R.id.operationReviewChip).isChecked = operationReviewOnly
         renderOperationChips(
             operationCompanyChips,
             "كل الجهات والحسابات",
@@ -268,6 +274,7 @@ class MainActivity : AppCompatActivity() {
             category = operationCategory,
             companyName = operationCompany,
             search = operationSearch.text?.toString(),
+            reviewOnly = operationReviewOnly,
         )
         operationsAdapter.submit(events)
         operationsEmpty.visibility = if (events.isEmpty()) View.VISIBLE else View.GONE
@@ -276,7 +283,8 @@ class MainActivity : AppCompatActivity() {
             30 -> "آخر 30 يوم"
             else -> "كل المدة"
         }
-        operationFilterSummary.text = "عرض ${events.size} عملية · ${operationCompany ?: "كل الشركات"} · $window · الحد الأقصى 200"
+        val review = if (operationReviewOnly) " · تحتاج مراجعة" else ""
+        operationFilterSummary.text = "عرض ${events.size} عملية · ${operationCompany ?: "كل الشركات"} · $window$review · الحد الأقصى 200"
     }
 
     private fun renderOperationChips(
@@ -743,7 +751,16 @@ class MainActivity : AppCompatActivity() {
         instrumentDirectory.text = if (instruments.isEmpty()) "لا توجد أدوات مالية مكتشفة بعد." else "تم اكتشاف ${instruments.size} حساب/بطاقة؛ المرتبط منها $linked، وغير المرتبط ${instruments.size - linked}."
         val summary = RelayStore.summary(this)
         dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
-        dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nغير مصنفة: ${summary.unknown}"
+        val reviewCount = database.reviewCount()
+        dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nتحتاج مراجعة: $reviewCount"
+        findViewById<Button>(R.id.openReviewQueue).apply {
+            text = if (reviewCount == 0) "لا توجد رسائل تحتاج مراجعة" else "مراجعة $reviewCount رسالة غير مكتملة الربط أو التصنيف"
+            isEnabled = reviewCount > 0
+            setOnClickListener {
+                operationReviewOnly = true
+                showPage(R.id.operationsPage)
+            }
+        }
         renderCustodySummary(database.osamaCustodySummary())
         renderOperations()
         accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."

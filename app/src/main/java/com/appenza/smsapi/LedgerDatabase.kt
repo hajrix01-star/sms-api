@@ -33,7 +33,7 @@ data class CustodySummary(
 )
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 6) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 7) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -72,7 +72,14 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
             db.execSQL("CREATE INDEX IF NOT EXISTS events_custody_idx ON events(custody_type)")
             backfillCustodyTypes(db)
         }
+        if (oldVersion < 7) {
+            // Old versions could retain OTP or beneficiary-setup notices in the local ledger.
+            // They are security/administrative messages, not financial operations.
+            removeSecurityEvents(db)
+            backfillCompanyNames(db)
+        }
         seedCompanyDirectory(db)
+        linkUnassignedEventsToDirectory(db)
     }
 
     fun insert(event: LedgerEvent): Boolean {
@@ -115,6 +122,7 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         category: String? = null,
         companyName: String? = null,
         search: String? = null,
+        reviewOnly: Boolean = false,
     ): List<LedgerEvent> {
         val filters = mutableListOf<String>()
         val args = mutableListOf<String>()
@@ -125,6 +133,10 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         sender?.let { filters += "sender = ?"; args += it }
         category?.let { filters += "category = ?"; args += it }
         companyName?.let { filters += "company_name = ?"; args += it }
+        if (reviewOnly) {
+            filters += "(category = ? OR company_name IS NULL)"
+            args += "غير مصنف"
+        }
         search?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
             filters += "(body LIKE ? OR counterparty LIKE ? OR instrument LIKE ?)"
             repeat(3) { args += "%$value%" }
@@ -155,6 +167,12 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
     fun categoriesWithEvents(): List<String> = readableDatabase.rawQuery(
         "SELECT category FROM events GROUP BY category ORDER BY COUNT(*) DESC", null,
     ).use { cursor -> buildList { while (cursor.moveToNext()) add(cursor.getString(0)) } }
+
+    /** A review item is either an unrecognised financial pattern or a message without a company/account link. */
+    fun reviewCount(): Int = readableDatabase.rawQuery(
+        "SELECT COUNT(*) FROM events WHERE category = ? OR company_name IS NULL",
+        arrayOf("غير مصنف"),
+    ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
 
     fun summary(): LedgerSummary {
         val counts = mutableMapOf<String, Int>()
@@ -259,6 +277,12 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         writableDatabase.insertWithOnConflict("instruments", null, ContentValues().apply {
             put("reference", reference); put("bank_sender", sender); put("kind", kind); put("company_id", companyId); put("role", role); preservedParent?.let { put("parent_reference", it) }
         }, SQLiteDatabase.CONFLICT_REPLACE)
+        // Keep a confirmed source classification intact (for example ARZ → Osama),
+        // but complete historic messages that had no company when this reference is linked.
+        writableDatabase.execSQL(
+            "UPDATE events SET company_name = (SELECT name FROM companies WHERE id = ?) WHERE instrument = ? AND company_name IS NULL",
+            arrayOf(companyId, reference),
+        )
     }
 
     private fun fingerprint(event: LedgerEvent): String = MessageDigest.getInstance("SHA-256")
@@ -293,6 +317,21 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         }
     }
 
+    private fun linkUnassignedEventsToDirectory(db: SQLiteDatabase) {
+        db.execSQL("""
+            UPDATE events
+            SET company_name = (
+                SELECT c.name FROM instruments i
+                JOIN companies c ON c.id = i.company_id
+                WHERE i.reference = events.instrument
+                LIMIT 1
+            )
+            WHERE company_name IS NULL
+              AND instrument IS NOT NULL
+              AND EXISTS (SELECT 1 FROM instruments i WHERE i.reference = events.instrument)
+        """.trimIndent())
+    }
+
     private fun backfillCompanyNames(db: SQLiteDatabase) {
         db.query("events", arrayOf("id", "sender", "body"), null, null, null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
@@ -308,6 +347,18 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                 val custodyType = BankEventParser.custodyType(cursor.getString(1), cursor.getString(2), cursor.getString(3)) ?: continue
                 db.update("events", ContentValues().apply { put("custody_type", custodyType) }, "id = ?", arrayOf(cursor.getLong(0).toString()))
             }
+        }
+    }
+
+    private fun removeSecurityEvents(db: SQLiteDatabase) {
+        val ids = mutableListOf<String>()
+        db.query("events", arrayOf("id", "body"), null, null, null, null, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                if (RelayStore.isSecurityMessage(cursor.getString(1))) ids += cursor.getLong(0).toString()
+            }
+        }
+        if (ids.isNotEmpty()) {
+            db.delete("events", "id IN (${ids.joinToString(",")})", null)
         }
     }
 }

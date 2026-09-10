@@ -44,7 +44,11 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" app:cardBackgroundColor="@color/success_container" app:cardCornerRadius="18dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:text="الرسوم البيانية التفصيلية ستعتمد على العمليات بعد ربط الحسابات والبطاقات بالشركات. لا نعرض أرقامًا مالية مضللة قبل اكتمال الربط." android:textColor="@color/text_on_success" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مراجعة آمنة" android:textColor="@color/text_on_success" android:textSize="18sp" android:textStyle="bold" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="لا تُهمل الرسائل غير الواضحة: تظهر هنا عندما لا يتعرف التطبيق على النوع المالي أو لا يستطيع ربطها بحساب/شركة." android:textColor="@color/text_on_success" android:textSize="14sp" android:lineSpacingExtra="5dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/openReviewQueue" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="14dp" android:text="مراجعة الرسائل" android:textColor="@color/text_on_success" app:backgroundTint="@color/surface" app:cornerRadius="14dp" />
+                    </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" app:cardBackgroundColor="@color/surface" app:cardCornerRadius="18dp" app:strokeColor="@color/outline" app:strokeWidth="1dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
@@ -98,6 +102,14 @@
                     <com.google.android.material.chip.Chip android:id="@+id/period30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="آخر 30 يوم" />
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/operationReviewChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:checkable="true"
+                android:text="تحتاج مراجعة" />
 
             <HorizontalScrollView
                 android:layout_width="match_parent"

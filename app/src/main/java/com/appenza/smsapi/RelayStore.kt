@@ -80,5 +80,7 @@ object RelayStore {
         Regex("\\b(?:otp|one[ -]?time(?: password)?|verification code|security code|temporary code|passcode)\\b", RegexOption.IGNORE_CASE),
         Regex("(?:رمز|كود)\\s*(?:موقت|مؤقت|التحقق|التاكد|التاكيد|التفعيل|الدخول|الامان|الامني)"),
         Regex("لا\\s+تشارك.{0,50}(?:رمز|كود)"),
+        Regex("(?:اضافة|إضافة)\\s+(?:المستفيد|مستفيد)", RegexOption.IGNORE_CASE),
+        Regex("(?:add|added)\\s+(?:a\\s+)?beneficiary", RegexOption.IGNORE_CASE),
     )
 }
