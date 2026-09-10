@@ -230,6 +230,34 @@
             android:textColor="#CFC7D2"
             android:textSize="13sp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="عينة القواعد"
+            android:textColor="#F4EFF4"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="3dp"
+            android:text="يصدر آخر 200 رسالة لكل مرسل محدد في JSON. رمز OTP يُخفى، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
+            android:textColor="#CFC7D2"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exportTrainingSample"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="تصدير عينة JSON (200 لكل بنك)"
+            android:textColor="#FFFFFF"
+            app:backgroundTint="#16805D"
+            app:cornerRadius="16dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/test"
             android:layout_width="match_parent"

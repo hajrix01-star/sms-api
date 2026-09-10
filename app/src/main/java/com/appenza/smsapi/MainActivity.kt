@@ -2,6 +2,8 @@ package com.appenza.smsapi
 
 import android.Manifest
 import android.app.DatePickerDialog
+import android.content.ClipData
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
@@ -12,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -20,6 +23,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var chips: ChipGroup
@@ -54,6 +60,7 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.enable).setOnClickListener { if (saveSenders()) requestReceiveSmsPermission() }
         findViewById<Button>(R.id.importHistory).setOnClickListener { if (saveSenders()) requestReadSmsPermission(ReadAction.IMPORT) }
+        findViewById<Button>(R.id.exportTrainingSample).setOnClickListener { if (saveSenders()) requestReadSmsPermission(ReadAction.EXPORT_SAMPLE) }
         findViewById<Button>(R.id.pickSenders).setOnClickListener { requestReadSmsPermission(ReadAction.PICK_SENDERS) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
@@ -121,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         when (readAction) {
             ReadAction.IMPORT -> importHistory()
             ReadAction.PICK_SENDERS -> showSenderPicker()
+            ReadAction.EXPORT_SAMPLE -> exportTrainingSample()
         }
     }
 
@@ -247,6 +255,95 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    private fun exportTrainingSample() {
+        val selectedSenders = RelayStore.senders(this)
+        Thread {
+            val result = runCatching {
+                val countBySender = selectedSenders.associateWith { 0 }.toMutableMap()
+                val messages = JSONArray()
+                val cursor = contentResolver.query(
+                    Telephony.Sms.Inbox.CONTENT_URI,
+                    arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
+                    null,
+                    null,
+                    "${Telephony.Sms.DATE} DESC",
+                ) ?: throw IllegalStateException("تعذر فتح سجل الرسائل")
+                cursor.use {
+                    val addressColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+                    val bodyColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
+                    val dateColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
+                    var scanned = 0
+                    while (cursor.moveToNext() && scanned < MAX_SAMPLE_SCAN && countBySender.values.any { it < SAMPLE_PER_SENDER }) {
+                        scanned++
+                        val actualSender = cursor.getString(addressColumn).orEmpty()
+                        val configuredSender = selectedSenders.firstOrNull { configured ->
+                            countBySender.getValue(configured) < SAMPLE_PER_SENDER && RelayStore.matchesSender(actualSender, listOf(configured))
+                        } ?: continue
+                        val body = cursor.getString(bodyColumn).orEmpty()
+                        val receivedAt = cursor.getLong(dateColumn)
+                        messages.put(
+                            JSONObject()
+                                .put("sender", actualSender)
+                                .put("selected_sender", configuredSender)
+                                .put("received_at_millis", receivedAt)
+                                .put("is_otp", RelayStore.isOtp(body))
+                                .put("body_sanitized", sanitizeForTraining(body)),
+                        )
+                        countBySender[configuredSender] = countBySender.getValue(configuredSender) + 1
+                    }
+                }
+                val counts = JSONObject().apply {
+                    countBySender.forEach { (sender, count) -> put(sender, count) }
+                }
+                val root = JSONObject()
+                    .put("schema_version", 1)
+                    .put("purpose", "bank_sms_rule_learning")
+                    .put("generated_at_millis", System.currentTimeMillis())
+                    .put("max_messages_per_sender", SAMPLE_PER_SENDER)
+                    .put("selected_senders", JSONArray(selectedSenders))
+                    .put("counts_by_sender", counts)
+                    .put("messages", messages)
+                ExportSample(root.toString(2), messages.length(), countBySender)
+            }
+            runOnUiThread {
+                result.onSuccess { sample ->
+                    if (sample.messageCount == 0) {
+                        val message = "لم يعثر التطبيق على رسائل للمرسلين المحددين"
+                        importResult.text = message
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                    } else {
+                        shareTrainingSample(sample)
+                    }
+                }.onFailure {
+                    val message = "تعذر إنشاء عينة JSON: ${it.message ?: "خطأ غير معروف"}"
+                    importResult.text = message
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun shareTrainingSample(sample: ExportSample) {
+        val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+        val file = File(exportDir, "bank-sms-training-${System.currentTimeMillis()}.json")
+        file.writeText(sample.json, Charsets.UTF_8)
+        val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+        val counts = sample.counts.entries.joinToString("، ") { "${it.key}: ${it.value}" }
+        importResult.text = "تم إنشاء ${sample.messageCount} رسالة للعينة ($counts). اختر ChatGPT من المشاركة لإرسال الملف."
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newRawUri("bank-sms-training", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(shareIntent, "إرسال عينة JSON"))
+    }
+
+    private fun sanitizeForTraining(body: String): String {
+        if (!RelayStore.isOtp(body)) return body
+        return body.replace(Regex("(?<![0-9٠-٩])[0-9٠-٩]{4,8}(?![0-9٠-٩])"), "[OTP]")
+    }
+
     private fun displaySenderPicker(discovered: List<String>) {
         if (discovered.isEmpty()) {
             Toast.makeText(this, "لم يعثر التطبيق على مرسلين في سجل الرسائل", Toast.LENGTH_LONG).show()
@@ -300,9 +397,12 @@ class MainActivity : AppCompatActivity() {
         const val MAX_SCAN = 2_000
         const val MAX_VISIBLE_SENDERS = 12
         const val MAX_PICKABLE_SENDERS = 80
+        const val SAMPLE_PER_SENDER = 200
+        const val MAX_SAMPLE_SCAN = 20_000
     }
 
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
     private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>)
-    private enum class ReadAction { IMPORT, PICK_SENDERS }
+    private data class ExportSample(val json: String, val messageCount: Int, val counts: Map<String, Int>)
+    private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE }
 }
