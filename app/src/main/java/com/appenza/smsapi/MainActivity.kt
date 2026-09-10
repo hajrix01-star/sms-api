@@ -554,6 +554,7 @@ class MainActivity : AppCompatActivity() {
             renderOperations()
             sheet.dismiss()
         }
+        sheet.show()
     }
 
     private fun renderOperationChips(

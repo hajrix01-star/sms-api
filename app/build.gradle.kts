@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 32
-        versionName = "0.19.2-filter-sheet"
+        versionCode = 33
+        versionName = "0.19.3-filter-sheet-fix"
     }
 
     signingConfigs {
