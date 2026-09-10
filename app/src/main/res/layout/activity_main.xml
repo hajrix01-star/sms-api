@@ -65,7 +65,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="أضف اسم المرسل كما يظهر في SMS، أو آخر 6–8 أرقام من جوال الاختبار."
+            android:text="للبنوك: اكتب الاسم كما يظهر في SMS. للأشخاص: اكتب آخر 6–8 أرقام من الرقم، وليس اسم جهة الاتصال."
             android:textColor="#CFC7D2"
             android:textSize="14sp" />
 
@@ -159,6 +159,54 @@
             app:backgroundTint="#16805D"
             app:cornerRadius="16dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="استيراد الرسائل السابقة"
+            android:textColor="#F4EFF4"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="يقرأ فقط الرسائل المطابقة للمرسلين أعلاه، حتى نهاية التاريخ الذي تحدده."
+            android:textColor="#CFC7D2"
+            android:textSize="14sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="تاريخ النهاية: 2026-09-10"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="#68B497"
+            app:hintTextColor="#CFC7D2">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/importUntil"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:textColor="#F4EFF4"
+                android:textColorHint="#89818D"
+                android:textDirection="ltr" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/importHistory"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="استيراد الرسائل المطابقة"
+            android:textColor="#DDF7EA"
+            app:backgroundTint="#244A3C"
+            app:cornerRadius="16dp"
+            app:strokeColor="#68B497"
+            app:strokeWidth="1dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/test"
             android:layout_width="match_parent"
@@ -224,7 +272,7 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="12dp"
             android:lineSpacingExtra="4dp"
-            android:text="يحفظ التطبيق آخر 20 سجلًا على هذا الجوال فقط. محتوى رموز التحقق يُخفى تلقائيًا ولا يقرأ التطبيق الرسائل القديمة."
+            android:text="يحفظ التطبيق آخر 200 سجل على هذا الجوال فقط. محتوى رموز التحقق يُخفى تلقائيًا. الاستيراد يحتاج إذن قراءة SMS ويعمل يدويًا فقط."
             android:textColor="#B8B0BC"
             android:textSize="14sp" />
     </LinearLayout>

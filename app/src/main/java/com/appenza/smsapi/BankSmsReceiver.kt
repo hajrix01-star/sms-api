@@ -12,11 +12,11 @@ class BankSmsReceiver : BroadcastReceiver() {
         Thread {
             try {
                 if (RelayStore.preferences(context).getBoolean(RelayStore.ENABLED, false)) {
-                    val allowedSenders = RelayStore.senders(context).map(String::lowercase)
+                    val allowedSenders = RelayStore.senders(context)
                     Telephony.Sms.Intents.getMessagesFromIntent(intent).forEach { message ->
                         val sender = message.displayOriginatingAddress ?: return@forEach
                         val body = message.messageBody.orEmpty()
-                        if (allowedSenders.any { sender.lowercase().contains(it) }) {
+                        if (RelayStore.matchesSender(sender, allowedSenders)) {
                             val outcome = if (RelayStore.isOtp(body)) {
                                 "تم الاستلام ثم استبعادها: رمز تحقق"
                             } else {

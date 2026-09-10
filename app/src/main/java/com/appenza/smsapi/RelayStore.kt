@@ -15,7 +15,7 @@ object RelayStore {
     const val ENABLED = "enabled"
     const val SENDERS = "senders"
     private const val RECEIPTS = "receipts"
-    private const val MAX_RECEIPTS = 20
+    private const val MAX_RECEIPTS = 200
 
     fun preferences(context: Context) = context.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
 
@@ -65,6 +65,17 @@ object RelayStore {
         val text = value.lowercase()
         return listOf("otp", "one-time", "verification code", "رمز التحقق", "رمز التاكيد", "كود التحقق")
             .any(text::contains)
+    }
+
+    fun matchesSender(actualSender: String, configuredSenders: List<String>): Boolean {
+        val normalizedActual = actualSender.trim().lowercase()
+        val actualDigits = actualSender.filter(Char::isDigit)
+        return configuredSenders.any { configured ->
+            val normalizedConfigured = configured.trim().lowercase()
+            val configuredDigits = configured.filter(Char::isDigit)
+            (normalizedConfigured.isNotEmpty() && normalizedActual.contains(normalizedConfigured)) ||
+                (configuredDigits.length >= 6 && actualDigits.endsWith(configuredDigits))
+        }
     }
 
     private fun receiptsJson(context: Context) = JSONArray(preferences(context).getString(RECEIPTS, "[]") ?: "[]")
