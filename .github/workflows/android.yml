@@ -72,8 +72,10 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         APK=$(find app/build/outputs/apk/release -name '*.apk' -print -quit)
+        OUTPUT="$RUNNER_TEMP/app-debug.apk"
+        cp "$APK" "$OUTPUT"
         if gh release view apk-debug >/dev/null 2>&1; then
-          gh release upload apk-debug "$APK#app-debug.apk" --clobber
+          gh release upload apk-debug "$OUTPUT#SMS API signed release" --clobber
         else
-          gh release create apk-debug "$APK#app-debug.apk" --title "SMS API" --notes "Installable APK signed with the persistent application key." --prerelease
+          gh release create apk-debug "$OUTPUT#SMS API signed release" --title "SMS API" --notes "Installable APK signed with the persistent application key." --prerelease
         fi
