@@ -123,6 +123,31 @@ object CompanyRules {
         }
     }
 
+    /**
+     * Bank alerts describe direction from the receiving bank account's point of view.
+     * When an SNB "incoming" alert explicitly identifies ARZ account 2029 as the
+     * source, the same movement is outgoing from ARZ's point of view.
+     */
+    fun categoryForCompany(
+        sender: String,
+        body: String,
+        companyName: String?,
+        parsedCategory: String,
+    ): String {
+        if (companyName != "شركة أرز" || parsedCategory != "إيداع / وارد") return parsedCategory
+        if (!sender.equals("SNB-AlAhli", ignoreCase = true)) return parsedCategory
+
+        val text = body.replace(Regex("[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]"), "")
+        val isArzSource = Regex("(?:من|From)\\s*[:：]?\\s*\\*?2029(?:\\D|$)", RegexOption.IGNORE_CASE)
+            .containsMatchIn(text) ||
+            text.contains("ARZ RESTURANT", ignoreCase = true) ||
+            text.contains("ARZ RESTAURANT", ignoreCase = true)
+        return categoryForKnownSource(parsedCategory, isArzSource)
+    }
+
+    internal fun categoryForKnownSource(parsedCategory: String, isKnownCompanySource: Boolean): String =
+        if (isKnownCompanySource && parsedCategory == "إيداع / وارد") "تحويل صادر" else parsedCategory
+
     private fun hasMaskedAccount(value: String, prefix: String, suffix: String): Boolean =
         Regex("$prefix\\*+$suffix").containsMatchIn(value) ||
             Regex("$suffix\\*+$prefix").containsMatchIn(value)

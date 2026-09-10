@@ -24,4 +24,5 @@
     <color name="text_danger">#F6D9DB</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="primary_action">#16805D</color>
+    <color name="outgoing_action">#FF8A80</color>
 </resources>

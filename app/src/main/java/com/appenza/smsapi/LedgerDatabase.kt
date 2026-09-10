@@ -39,7 +39,7 @@ data class CustodySummary(
 )
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 11) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 12) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -102,22 +102,33 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
             backfillCompanyNames(db)
             backfillParsedEvents(db)
         }
+        if (oldVersion < 12) {
+            // Recalculate company-relative direction for transfers sourced from ARZ.
+            backfillParsedEvents(db)
+        }
         seedCompanyDirectory(db)
         linkUnassignedEventsToDirectory(db)
     }
 
     fun insert(event: LedgerEvent): Boolean {
+        val companyName = event.companyName ?: CompanyRules.inferCompany(event.sender, event.body)
+        val category = CompanyRules.categoryForCompany(
+            event.sender,
+            event.body,
+            companyName,
+            event.category,
+        )
         val values = ContentValues().apply {
             put("fingerprint", fingerprint(event))
             put("sender", event.sender)
             put("received_at", event.receivedAt)
-            put("category", event.category)
+            put("category", category)
             event.amount?.let { put("amount", it) }
             event.instrument?.let { put("instrument", it) }
             event.counterparty?.let { put("counterparty", it) }
             put("body", event.body)
-            put("company_name", event.companyName ?: CompanyRules.inferCompany(event.sender, event.body))
-            put("custody_type", event.custodyType ?: BankEventParser.custodyType(event.sender, event.body, event.category))
+            put("company_name", companyName)
+            put("custody_type", event.custodyType ?: BankEventParser.custodyType(event.sender, event.body, category))
         }
         return writableDatabase.insertWithOnConflict("events", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1L
     }
@@ -143,13 +154,15 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                     val currentCustody = cursor.getString(5)
                     val parsed = BankEventParser.parse(sender, body, receivedAt)
                     val inferredCompany = CompanyRules.inferCompany(sender, body)
+                    val companyName = inferredCompany ?: currentCompany
+                    val category = CompanyRules.categoryForCompany(sender, body, companyName, parsed.category)
                     val values = ContentValues().apply {
-                        put("category", parsed.category)
+                        put("category", category)
                         put("amount", parsed.amount)
                         put("instrument", parsed.instrument)
                         put("counterparty", parsed.counterparty)
                         // Preserve a manual/company-directory association when no automatic rule matches.
-                        put("company_name", inferredCompany ?: currentCompany)
+                        put("company_name", companyName)
                         put("custody_type", parsed.custodyType ?: currentCustody)
                     }
                     db.update("events", values, "id = ?", arrayOf(id.toString()))
@@ -485,9 +498,11 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                 val id = cursor.getLong(0)
                 val sender = cursor.getString(1)
                 val parsed = BankEventParser.parse(sender, cursor.getString(3), cursor.getLong(2))
-                val company = CompanyRules.inferCompany(sender, cursor.getString(3)) ?: cursor.getString(4)
+                val body = cursor.getString(3)
+                val company = CompanyRules.inferCompany(sender, body) ?: cursor.getString(4)
+                val category = CompanyRules.categoryForCompany(sender, body, company, parsed.category)
                 db.update("events", ContentValues().apply {
-                    put("category", parsed.category)
+                    put("category", category)
                     put("amount", parsed.amount)
                     put("instrument", parsed.instrument)
                     put("counterparty", parsed.counterparty)

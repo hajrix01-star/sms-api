@@ -32,10 +32,12 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val event = items[position]
+        val cashDirection = OperationDirectionResolver.resolve(event.category)
         holder.category.text = event.category
-        holder.direction.text = operationDirection(event)
+        holder.direction.text = operationDirection(event, cashDirection)
+        holder.direction.setTextColor(ContextCompat.getColor(holder.itemView.context, directionColor(cashDirection)))
         holder.amount.text = event.amount?.let { "SAR ${amountFormat.format(it)}" } ?: "—"
-        holder.amount.setTextColor(ContextCompat.getColor(holder.itemView.context, amountColor(event)))
+        holder.amount.setTextColor(ContextCompat.getColor(holder.itemView.context, directionColor(cashDirection)))
         val reference = event.instrument?.let { " · $it" }.orEmpty()
         val company = event.companyName?.let { "$it · " }.orEmpty()
         holder.meta.text = "$company${event.sender}$reference · ${dateFormat.format(Date(event.receivedAt))}"
@@ -44,22 +46,19 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         holder.preview.text = event.body.replace(Regex("\\s+"), " ").trim()
     }
 
-    private fun operationDirection(event: LedgerEvent): String = when {
+    private fun operationDirection(event: LedgerEvent, cashDirection: CashDirection): String = when {
         event.custodyType == "تمويل عهدة" -> "تغذية عهدة"
         event.custodyType == "مشتريات عهدة" -> "مصروف بطاقة العهدة"
         event.custodyType == "سحب نقدي عهدة" -> "نقد مع المندوب"
-        event.category.contains("إيداع") || event.category.contains("تسوية") || event.category.contains("وارد") -> "داخل الحساب"
-        event.category.contains("تحويل") -> "حركة تحويل"
-        event.category.contains("سحب") -> "سحب نقدي"
-        event.category.contains("شراء") || event.category.contains("POS") -> "عملية شراء"
-        event.category.contains("رسوم") -> "مصروف بنكي"
+        cashDirection == CashDirection.INCOMING -> "↑ داخل الحساب"
+        cashDirection == CashDirection.OUTGOING -> "↓ خارج الحساب"
         else -> event.companyName ?: "بانتظار الربط"
     }
 
-    private fun amountColor(event: LedgerEvent): Int = when {
-        event.category.contains("إيداع") || event.category.contains("تسوية") || event.category.contains("وارد") -> R.color.primary_action
-        event.category.contains("رسوم") -> R.color.text_danger
-        else -> R.color.text_primary
+    private fun directionColor(direction: CashDirection): Int = when (direction) {
+        CashDirection.INCOMING -> R.color.primary_action
+        CashDirection.OUTGOING -> R.color.outgoing_action
+        CashDirection.NEUTRAL -> R.color.text_secondary
     }
 
     override fun getItemCount(): Int = items.size
