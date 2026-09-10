@@ -102,18 +102,21 @@ object CompanyRules {
             hasMaskedAccount(text, "375", "204") || hasMaskedAccount(text, "375", "296") ||
             (sender.equals("SNB-AlAhli", ignoreCase = true) && (
                 text.contains("KEETA", ignoreCase = true) || text.contains("كيتا") ||
-                    text.contains("HUNGERSTATION", ignoreCase = true) || text.contains("HUNGER STATION", ignoreCase = true) || text.contains("هنقرستيشن") ||
+                    text.contains("HUNGERSTATION", ignoreCase = true) || text.contains("HUNGER STATION", ignoreCase = true) || text.contains("HANQARSTISHN", ignoreCase = true) || text.contains("هنقرستيشن") ||
                     text.contains("JAHEZ", ignoreCase = true) || text.contains("جاهز") ||
                     hasMaskedReference(text, "1310") || hasMaskedReference(text, "0605") || hasMaskedReference(text, "7507")
                 )) -> "شركة المعلم الشامي"
         text.contains("مؤسسة دوحة المستهلك التجارية") ||
             (sender.equals("SNB-AlAhli", ignoreCase = true) && (
                 // الأهلي قد يخفي حساب دوحة بصيغة 078*409 أو 078***409.
-                Regex("078\\*+409").containsMatchIn(text) ||
-                    Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(text)
+                hasMaskedAccount(text, "078", "409") ||
+                Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(text)
             )) -> "مؤسسة دوحة المستهلك التجارية"
         sender.equals("SNB-AlAhli", ignoreCase = true) && text.contains("2237", ignoreCase = true) -> "نطاق شخصي — الأهلي"
-        sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*\\*?0305\\*?").containsMatchIn(text) -> "نطاق شخصي — الأهلي"
+        sender.equals("SNB-AlAhli", ignoreCase = true) && (
+            Regex("(?:من|حسابك)\\s*[:：]?\\s*\\*?0305\\*?").containsMatchIn(text) ||
+                hasMaskedAccount(text, "078", "305")
+            ) -> "نطاق شخصي — الأهلي"
         sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("By:0187", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
         sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("From:1994", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
         else -> null
@@ -121,8 +124,8 @@ object CompanyRules {
     }
 
     private fun hasMaskedAccount(value: String, prefix: String, suffix: String): Boolean =
-        Regex("$prefix\\*{3}$suffix").containsMatchIn(value) ||
-            Regex("$suffix\\*{3}$prefix").containsMatchIn(value)
+        Regex("$prefix\\*+$suffix").containsMatchIn(value) ||
+            Regex("$suffix\\*+$prefix").containsMatchIn(value)
 
     /** Matches only a masked account suffix such as 014***1310, never the full account number. */
     private fun hasMaskedReference(value: String, suffix: String): Boolean =

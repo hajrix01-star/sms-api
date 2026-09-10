@@ -44,7 +44,7 @@ object RelayStore {
         LedgerDatabase(context).clear()
     }
 
-    /** Security and OTP messages are excluded completely from imports, the local ledger and JSON exports. */
+    /** OTP, rejected operations and non-financial bank notices never enter the financial ledger or exports. */
     fun isOtp(value: String): Boolean = isSecurityMessage(value)
 
     fun isSecurityMessage(value: String): Boolean {
@@ -80,7 +80,16 @@ object RelayStore {
         Regex("\\b(?:otp|one[ -]?time(?: password)?|verification code|security code|temporary code|passcode)\\b", RegexOption.IGNORE_CASE),
         Regex("(?:رمز|كود)\\s*(?:موقت|مؤقت|التحقق|التاكد|التاكيد|التفعيل|الدخول|الامان|الامني)"),
         Regex("لا\\s+تشارك.{0,50}(?:رمز|كود)"),
+        Regex("الرقم\\s+السري\\s+ل?مر[هة]\\s+واحد[هة]"),
         Regex("(?:اضافة|إضافة)\\s+(?:المستفيد|مستفيد)", RegexOption.IGNORE_CASE),
         Regex("(?:add|added)\\s+(?:a\\s+)?beneficiary", RegexOption.IGNORE_CASE),
+        Regex("(?:تم\\s+رفض\\s+العملية|transaction\\s+declined|insufficient\\s+funds)", RegexOption.IGNORE_CASE),
+        Regex("حالة\\s+حسابك?.{0,40}راكد"),
+        Regex("(?:خدماتنا\\s+غير\\s+متاحة|services?.{0,30}unavailable)", RegexOption.IGNORE_CASE),
+        Regex("(?:رصيد\\s+نقاط|points?.{0,40}(?:expire|ستنتهي))", RegexOption.IGNORE_CASE),
+        Regex("(?:تحديث\\s+الشروط\\s+والاحكام|terms\\s+and\\s+conditions)", RegexOption.IGNORE_CASE),
+        Regex("تم\\s+استخدام\\s+[0-9]+%\\s+من\\s+حدك\\s+الائتماني"),
+        Regex("تم\\s+تسجيل\\s+طلبكم.{0,100}نقاط\\s+البيع"),
+        Regex("تم\\s+تحويل\\s+عمليتك\\s+الشرائية.{0,100}اقساط"),
     )
 }

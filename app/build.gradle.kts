@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 26
-        versionName = "0.17.5-review-export"
+        versionCode = 27
+        versionName = "0.17.6-review-rules"
     }
 
     signingConfigs {

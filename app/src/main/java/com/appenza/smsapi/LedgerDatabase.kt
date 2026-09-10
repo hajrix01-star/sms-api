@@ -33,7 +33,7 @@ data class CustodySummary(
 )
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 10) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 11) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -89,6 +89,12 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         if (oldVersion < 10) {
             // Link historic SNB settlement messages for Keeta, HungerStation and Jahez to Muallam.
             backfillCompanyNames(db)
+        }
+        if (oldVersion < 11) {
+            // Remove rejected/non-financial notices and re-parse historic messages using the expanded bank rules.
+            removeSecurityEvents(db)
+            backfillCompanyNames(db)
+            backfillParsedEvents(db)
         }
         seedCompanyDirectory(db)
         linkUnassignedEventsToDirectory(db)
@@ -402,6 +408,29 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         }
     }
 
+    private fun backfillParsedEvents(db: SQLiteDatabase) {
+        db.query(
+            "events",
+            arrayOf("id", "sender", "received_at", "body", "company_name", "custody_type"),
+            null, null, null, null, null,
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                val sender = cursor.getString(1)
+                val parsed = BankEventParser.parse(sender, cursor.getString(3), cursor.getLong(2))
+                val company = CompanyRules.inferCompany(sender, cursor.getString(3)) ?: cursor.getString(4)
+                db.update("events", ContentValues().apply {
+                    put("category", parsed.category)
+                    put("amount", parsed.amount)
+                    put("instrument", parsed.instrument)
+                    put("counterparty", parsed.counterparty)
+                    put("company_name", company)
+                    put("custody_type", parsed.custodyType ?: cursor.getString(5))
+                }, "id = ?", arrayOf(id.toString()))
+            }
+        }
+    }
+
     private fun removeSecurityEvents(db: SQLiteDatabase) {
         val ids = mutableListOf<String>()
         db.query("events", arrayOf("id", "body"), null, null, null, null, null).use { cursor ->
@@ -428,12 +457,13 @@ object BankEventParser {
             body.containsAny("تسوية نقطة البيع") -> "تسوية POS"
             body.containsAny("خصم رسوم", "رسوم بنكية") -> "رسوم بنكية"
             body.containsAny("سداد", "sadad") -> "سداد"
-            body.containsAny("سحب صراف", "Withdrawal:ATM") -> "سحب صراف"
+            body.containsAny("سحب صراف", "سحب نقدي -", "Withdrawal:ATM") -> "سحب صراف"
             body.containsAny("داخلي", "Internal") -> "تحويل داخلي"
-            body.containsAny("حوالة صادرة", "تم سحب") && body.containsAny("تحويل", "Transfer") -> "تحويل صادر"
-            body.containsAny("تم ايداع", "تم إيداع", "حوالة واردة", "Credit Transfer", "إيداع في حساب") -> "إيداع / وارد"
-            body.containsAny("شراء-POS", "POS Purchase", "شراء محلي", "شراء انترنت", "Online Purchase") -> "شراء"
             body.containsAny("تم رفض", "Declined", "Insufficient funds") -> "عملية مرفوضة"
+            body.containsAny("حوالة صادرة محلية", "حوالة فورية صادرة") ||
+                (body.containsAny("حوالة صادرة", "تم سحب") && body.containsAny("تحويل", "Transfer")) -> "تحويل صادر"
+            body.containsAny("تم ايداع", "تم إيداع", "حوالة واردة", "حوالة محلية واردة", "Credit Transfer", "إيداع في حساب") -> "إيداع / وارد"
+            body.containsAny("شراء-POS", "POS Purchase", "شراء محلي", "شراء انترنت", "شراء إنترنت", "Online Purchase") -> "شراء"
             else -> "غير مصنف"
         }
         return LedgerEvent(sender, receivedAt, category, amount(body), instrument(body), counterparty(body), body, custodyType = custodyType(sender, body, category))
@@ -457,7 +487,7 @@ object BankEventParser {
     }
 
     private fun instrument(body: String): String? = listOf(
-        Regex("(?:البطاقة|بطاقه|مدى-أثير|By)\\s*[:：;]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
+        Regex("(?:البطاقة|بطاقه|إئتمانية|ائتمانية|مدى-أثير|By)\\s*[:：;]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
         Regex("(?:حسابك|من)\\s*[:：]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
         Regex("From\\s*:\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
         Regex("To\\s*:\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
