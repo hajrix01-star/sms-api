@@ -258,6 +258,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }.start()
         }
+        findViewById<Button>(R.id.operationExportReview).setOnClickListener { exportReviewQueue() }
         operationSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -297,6 +298,11 @@ class MainActivity : AppCompatActivity() {
         )
         operationsAdapter.submit(events)
         operationsEmpty.visibility = if (events.isEmpty()) View.VISIBLE else View.GONE
+        val reviewCount = database.reviewCount()
+        findViewById<Button>(R.id.operationExportReview).apply {
+            text = if (reviewCount == 0) "لا توجد مراجعة للتصدير" else "تصدير $reviewCount رسالة تحتاج مراجعة (JSON)"
+            isEnabled = reviewCount > 0
+        }
         val window = when (operationDays) {
             7 -> "آخر 7 أيام"
             30 -> "آخر 30 يوم"
@@ -629,6 +635,63 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    /** Shares only local ledger items that still require a rule or a company/account link. */
+    private fun exportReviewQueue() {
+        Thread {
+            val result = runCatching {
+                val database = LedgerDatabase(this)
+                val totalReviewCount = database.reviewCount()
+                val events = database.events(limit = MAX_REVIEW_EXPORT, reviewOnly = true)
+                    // Defensive guarantee: OTP/security messages are never exported even if an old local database contains one.
+                    .filterNot { RelayStore.isSecurityMessage(it.body) }
+                val messages = JSONArray()
+                events.forEach { event ->
+                    val reasons = JSONArray().apply {
+                        if (event.category == "غير مصنف") put("نوع العملية غير معروف")
+                        if (event.companyName == null) put("لا يوجد ربط بجهة أو حساب")
+                    }
+                    messages.put(
+                        JSONObject()
+                            .put("sender", event.sender)
+                            .put("received_at_millis", event.receivedAt)
+                            .put("received_at", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).format(Date(event.receivedAt)))
+                            .put("category", event.category)
+                            .put("amount_sar", event.amount)
+                            .put("instrument_reference", event.instrument)
+                            .put("counterparty", event.counterparty)
+                            .put("company_name", event.companyName)
+                            .put("custody_type", event.custodyType)
+                            .put("review_reasons", reasons)
+                            .put("body", event.body),
+                    )
+                }
+                val root = JSONObject()
+                    .put("schema_version", 1)
+                    .put("purpose", "bank_sms_review_rule_analysis")
+                    .put("generated_at_millis", System.currentTimeMillis())
+                    .put("security_messages_excluded", true)
+                    .put("scope", "messages_needing_review_only")
+                    .put("review_count_at_export", totalReviewCount)
+                    .put("exported_count", messages.length())
+                    .put("max_export_count", MAX_REVIEW_EXPORT)
+                    .put("truncated", totalReviewCount > messages.length())
+                    .put("messages", messages)
+                ReviewExport(root.toString(2), messages.length(), totalReviewCount)
+            }
+            runOnUiThread {
+                result.onSuccess { export ->
+                    if (export.messageCount == 0) {
+                        Toast.makeText(this, "لا توجد رسائل تحتاج مراجعة للتصدير", Toast.LENGTH_LONG).show()
+                    } else {
+                        shareReviewExport(export)
+                    }
+                }.onFailure {
+                    Toast.makeText(this, "تعذر تصدير قائمة المراجعة: ${it.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
     private fun shareTrainingSample(sample: ExportSample) {
         val exportDir = File(cacheDir, "exports").apply { mkdirs() }
         val file = File(exportDir, "bank-sms-training-${System.currentTimeMillis()}.json")
@@ -644,6 +707,28 @@ class MainActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivity(Intent.createChooser(shareIntent, "إرسال عينة JSON"))
+    }
+
+    private fun shareReviewExport(export: ReviewExport) {
+        val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+        val file = File(exportDir, "bank-sms-review-${System.currentTimeMillis()}.json")
+        file.writeText(export.json, Charsets.UTF_8)
+        val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+        val omitted = (export.totalReviewCount - export.messageCount).coerceAtLeast(0)
+        val message = buildString {
+            append("تم إنشاء ملف JSON يضم ${export.messageCount} رسالة تحتاج مراجعة فقط. ")
+            if (omitted > 0) append("لم تُصدَّر $omitted رسالة بسبب حد التصدير الآمن. ")
+            append("رسائل OTP والأمن مستبعدة. اختر ChatGPT لإرفاق الملف.")
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TITLE, "قائمة مراجعة رسائل البنك")
+            clipData = ClipData.newRawUri("bank-sms-review", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(shareIntent, "إرفاق قائمة المراجعة JSON"))
     }
 
     private fun displaySenderPicker(discovered: List<String>) {
@@ -831,10 +916,12 @@ class MainActivity : AppCompatActivity() {
         const val MAX_PICKABLE_SENDERS = 80
         const val SAMPLE_PER_SENDER = 600
         const val MAX_SAMPLE_SCAN = 60_000
+        const val MAX_REVIEW_EXPORT = 500
     }
 
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
     private data class ImportResult(val imported: Int, val scanned: Int, val visibleSenders: List<String>, val securityExcluded: Int)
     private data class ExportSample(val json: String, val messageCount: Int, val counts: Map<String, Int>, val securityExcluded: Map<String, Int>)
+    private data class ReviewExport(val json: String, val messageCount: Int, val totalReviewCount: Int)
     private enum class ReadAction { IMPORT, PICK_SENDERS, EXPORT_SAMPLE, ENABLE_RECOVERY, RECOVER_NOW }
 }

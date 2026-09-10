@@ -140,6 +140,19 @@
                     app:strokeWidth="1dp" />
             </LinearLayout>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/operationExportReview"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="6dp"
+                android:text="تصدير الرسائل التي تحتاج مراجعة (JSON)"
+                android:textColor="@color/text_accent"
+                android:textSize="13sp"
+                app:backgroundTint="@color/surface_accent"
+                app:cornerRadius="14dp"
+                app:strokeColor="@color/accent"
+                app:strokeWidth="1dp" />
+
             <LinearLayout
                 android:id="@+id/operationAdvancedFilters"
                 android:layout_width="match_parent"
