@@ -274,7 +274,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
-            android:text="يصدر آخر 200 رسالة غير أمنية لكل مرسل محدد في JSON. رسائل OTP والأمن تُستبعد بالكامل، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
+            android:text="يصدر آخر 600 رسالة غير أمنية لكل مرسل محدد في JSON. رسائل OTP والأمن تُستبعد بالكامل، ولا تُرسل الرسائل إلا عندما تختار مشاركتها بنفسك."
             android:textColor="#CFC7D2"
             android:textSize="14sp" />
 
@@ -283,7 +283,7 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
-            android:text="تصدير عينة JSON (200 لكل بنك)"
+            android:text="تصدير عينة JSON (600 لكل بنك)"
             android:textColor="#FFFFFF"
             app:backgroundTint="#16805D"
             app:cornerRadius="16dp" />

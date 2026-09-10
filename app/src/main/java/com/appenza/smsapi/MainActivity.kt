@@ -447,8 +447,8 @@ class MainActivity : AppCompatActivity() {
         const val MAX_SCAN = 2_000
         const val MAX_VISIBLE_SENDERS = 12
         const val MAX_PICKABLE_SENDERS = 80
-        const val SAMPLE_PER_SENDER = 200
-        const val MAX_SAMPLE_SCAN = 20_000
+        const val SAMPLE_PER_SENDER = 600
+        const val MAX_SAMPLE_SCAN = 60_000
     }
 
     private data class HistoricalMessage(val sender: String, val body: String, val receivedAt: Long)
