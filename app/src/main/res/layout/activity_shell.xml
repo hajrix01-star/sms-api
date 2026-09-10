@@ -86,22 +86,18 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
-            <HorizontalScrollView
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/operationPeriodChips"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:scrollbars="none">
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/operationPeriodChips"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:chipSpacingHorizontal="8dp"
-                    app:singleSelection="true">
-                    <com.google.android.material.chip.Chip android:id="@+id/periodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:checkable="true" android:text="كل المدة" />
-                    <com.google.android.material.chip.Chip android:id="@+id/period7Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="آخر 7 أيام" />
-                    <com.google.android.material.chip.Chip android:id="@+id/period30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="آخر 30 يوم" />
-                </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip android:id="@+id/periodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:checkable="true" android:text="كل المدة" />
+                <com.google.android.material.chip.Chip android:id="@+id/period7Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="آخر 7 أيام" />
+                <com.google.android.material.chip.Chip android:id="@+id/period30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="آخر 30 يوم" />
+            </com.google.android.material.chip.ChipGroup>
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/operationReviewChip"
@@ -111,44 +107,32 @@
                 android:checkable="true"
                 android:text="تحتاج مراجعة" />
 
-            <HorizontalScrollView
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/operationCompanyChips"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:scrollbars="none">
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/operationCompanyChips"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:chipSpacingHorizontal="8dp"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp"
+                app:singleSelection="true" />
 
-            <HorizontalScrollView
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/operationBankChips"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:scrollbars="none">
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/operationBankChips"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:chipSpacingHorizontal="8dp"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp"
+                app:singleSelection="true" />
 
-            <HorizontalScrollView
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/operationCategoryChips"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:scrollbars="none">
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/operationCategoryChips"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:chipSpacingHorizontal="8dp"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp"
+                app:singleSelection="true" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"

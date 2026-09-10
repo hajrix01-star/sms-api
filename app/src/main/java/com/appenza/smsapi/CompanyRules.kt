@@ -86,7 +86,11 @@ object CompanyRules {
             (sender.equals("AlRajhiBank", ignoreCase = true) && (text.contains("From:5204", ignoreCase = true) || text.contains("From:1296", ignoreCase = true))) ||
             hasMaskedAccount(text, "375", "204") || hasMaskedAccount(text, "375", "296") -> "شركة المعلم الشامي"
         text.contains("مؤسسة دوحة المستهلك التجارية") ||
-            (sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(text)) -> "مؤسسة دوحة المستهلك التجارية"
+            (sender.equals("SNB-AlAhli", ignoreCase = true) && (
+                // الأهلي قد يخفي الحساب 07871436000409 بصيغة 078*409 أو 078***409.
+                Regex("078\\*+409").containsMatchIn(text) ||
+                    Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(text)
+            )) -> "مؤسسة دوحة المستهلك التجارية"
         sender.equals("SNB-AlAhli", ignoreCase = true) && text.contains("2237", ignoreCase = true) -> "نطاق شخصي — الأهلي"
         sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*\\*?0305\\*?").containsMatchIn(text) -> "نطاق شخصي — الأهلي"
         sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("By:0187", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
