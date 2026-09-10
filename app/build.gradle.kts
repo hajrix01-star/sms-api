@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.13.0-operations-ledger"
+        versionCode = 17
+        versionName = "0.14.0-company-linking"
     }
 
     buildTypes {

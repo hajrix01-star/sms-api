@@ -55,13 +55,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var operationsAdapter: OperationsAdapter
     private lateinit var operationFilterSummary: TextView
     private lateinit var operationsEmpty: TextView
+    private lateinit var operationCompanyChips: ChipGroup
     private lateinit var operationBankChips: ChipGroup
     private lateinit var operationCategoryChips: ChipGroup
     private lateinit var operationSearch: EditText
     private lateinit var accountsOverview: TextView
+    private lateinit var accountSuggestions: TextView
     private val senders = mutableListOf<String>()
     private var readAction = ReadAction.IMPORT
     private var operationDays: Int? = null
+    private var operationCompany: String? = null
     private var operationSender: String? = null
     private var operationCategory: String? = null
 
@@ -93,10 +96,12 @@ class MainActivity : AppCompatActivity() {
         dashboardSummary = findViewById(R.id.dashboardSummary)
         operationFilterSummary = findViewById(R.id.operationsFilterSummary)
         operationsEmpty = findViewById(R.id.operationsEmpty)
+        operationCompanyChips = findViewById(R.id.operationCompanyChips)
         operationBankChips = findViewById(R.id.operationBankChips)
         operationCategoryChips = findViewById(R.id.operationCategoryChips)
         operationSearch = findViewById(R.id.operationSearch)
         accountsOverview = findViewById(R.id.accountsOverview)
+        accountSuggestions = findViewById(R.id.accountSuggestions)
         setupOperations()
         senders.addAll(RelayStore.senders(this))
 
@@ -237,6 +242,12 @@ class MainActivity : AppCompatActivity() {
     private fun renderOperations() {
         val database = LedgerDatabase(this)
         renderOperationChips(
+            operationCompanyChips,
+            "كل الشركات والنطاقات",
+            database.companies().map { it.name },
+            operationCompany,
+        ) { operationCompany = it }
+        renderOperationChips(
             operationBankChips,
             "كل البنوك والمرسلين",
             database.sendersWithEvents(),
@@ -252,6 +263,7 @@ class MainActivity : AppCompatActivity() {
             days = operationDays,
             sender = operationSender,
             category = operationCategory,
+            companyName = operationCompany,
             search = operationSearch.text?.toString(),
         )
         operationsAdapter.submit(events)
@@ -261,7 +273,7 @@ class MainActivity : AppCompatActivity() {
             30 -> "آخر 30 يوم"
             else -> "كل المدة"
         }
-        operationFilterSummary.text = "عرض ${events.size} عملية · $window · الحد الأقصى 200"
+        operationFilterSummary.text = "عرض ${events.size} عملية · ${operationCompany ?: "كل الشركات"} · $window · الحد الأقصى 200"
     }
 
     private fun renderOperationChips(
@@ -657,7 +669,7 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle("الحسابات والبطاقات المكتشفة")
             .setItems(instruments.map { instrument ->
-                "${instrument.reference} · ${instrument.kind} · ${instrument.bankSender}\n${instrument.companyName ?: "غير مربوط"}${instrument.role?.let { " — $it" } ?: ""} · ${instrument.events} حركة"
+                "${instrument.reference} · ${instrument.kind} · ${instrument.bankSender}\n${instrument.companyName ?: "غير مربوط"}${instrument.role?.let { " — $it" } ?: ""}${instrument.parentReference?.let { " · مرتبط بـ $it" } ?: ""} · ${instrument.events} حركة"
             }.toTypedArray()) { _, index -> showInstrumentAssignment(instruments[index], companies) }
             .setNegativeButton("إغلاق", null)
             .show()
@@ -731,6 +743,11 @@ class MainActivity : AppCompatActivity() {
         dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nغير مصنفة: ${summary.unknown}"
         renderOperations()
         accountsOverview.text = if (instruments.isEmpty()) "استورد رسائل البنك أولًا ليكتشف التطبيق المراجع المموهة للحسابات والبطاقات." else "${companies.size} شركات/نطاقات مسجلة. ${instruments.size} أدوات مالية مكتشفة، منها $linked مربوطة."
+        accountSuggestions.text = (
+            CompanyRules.proposals.map { proposal ->
+                "${proposal.companyName} · ${proposal.bankSender} · ${proposal.reference}\n${proposal.role}"
+            } + CompanyRules.ambiguousSuggestions()
+        ).joinToString("\n\n")
     }
 
     private companion object {

@@ -14,14 +14,15 @@ data class LedgerEvent(
     val instrument: String?,
     val counterparty: String?,
     val body: String,
+    val companyName: String? = null,
 )
 
 data class LedgerSummary(val total: Int, val incoming: Int, val outgoing: Int, val fees: Int, val unknown: Int)
 data class Company(val id: Long, val name: String)
-data class FinancialInstrument(val reference: String, val bankSender: String, val kind: String, val companyName: String?, val role: String?, val events: Int)
+data class FinancialInstrument(val reference: String, val bankSender: String, val kind: String, val companyName: String?, val role: String?, val parentReference: String?, val events: Int)
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 2) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 5) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -33,16 +34,27 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                 amount REAL,
                 instrument TEXT,
                 counterparty TEXT,
-                body TEXT NOT NULL
+                body TEXT NOT NULL,
+                company_name TEXT
             )
         """.trimIndent())
         db.execSQL("CREATE INDEX events_received_at_idx ON events(received_at DESC)")
         db.execSQL("CREATE INDEX events_category_idx ON events(category)")
+        db.execSQL("CREATE INDEX events_company_idx ON events(company_name)")
         createDirectoryTables(db)
+        seedCompanyDirectory(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) createDirectoryTables(db)
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE events ADD COLUMN company_name TEXT")
+            db.execSQL("CREATE INDEX IF NOT EXISTS events_company_idx ON events(company_name)")
+            backfillCompanyNames(db)
+        }
+        if (oldVersion < 4) db.execSQL("ALTER TABLE instruments ADD COLUMN parent_reference TEXT")
+        if (oldVersion < 5) db.execSQL("UPDATE events SET instrument = TRIM(instrument, '*') WHERE instrument IS NOT NULL")
+        seedCompanyDirectory(db)
     }
 
     fun insert(event: LedgerEvent): Boolean {
@@ -55,13 +67,14 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
             event.instrument?.let { put("instrument", it) }
             event.counterparty?.let { put("counterparty", it) }
             put("body", event.body)
+            put("company_name", event.companyName ?: CompanyRules.inferCompany(event.sender, event.body))
         }
         return writableDatabase.insertWithOnConflict("events", null, values, SQLiteDatabase.CONFLICT_IGNORE) != -1L
     }
 
     fun latest(limit: Int = 100): List<LedgerEvent> = readableDatabase.query(
         "events",
-        arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body"),
+        arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body", "company_name"),
         null, null, null, null, "received_at DESC", limit.toString(),
     ).use { cursor ->
         buildList {
@@ -69,7 +82,7 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                 LedgerEvent(
                     sender = cursor.getString(0), receivedAt = cursor.getLong(1), category = cursor.getString(2),
                     amount = if (cursor.isNull(3)) null else cursor.getDouble(3),
-                    instrument = cursor.getString(4), counterparty = cursor.getString(5), body = cursor.getString(6),
+                    instrument = cursor.getString(4), counterparty = cursor.getString(5), body = cursor.getString(6), companyName = cursor.getString(7),
                 )
             )
         }
@@ -81,6 +94,7 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         days: Int? = null,
         sender: String? = null,
         category: String? = null,
+        companyName: String? = null,
         search: String? = null,
     ): List<LedgerEvent> {
         val filters = mutableListOf<String>()
@@ -91,13 +105,14 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         }
         sender?.let { filters += "sender = ?"; args += it }
         category?.let { filters += "category = ?"; args += it }
+        companyName?.let { filters += "company_name = ?"; args += it }
         search?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
             filters += "(body LIKE ? OR counterparty LIKE ? OR instrument LIKE ?)"
             repeat(3) { args += "%$value%" }
         }
         return readableDatabase.query(
             "events",
-            arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body"),
+            arrayOf("sender", "received_at", "category", "amount", "instrument", "counterparty", "body", "company_name"),
             filters.takeIf { it.isNotEmpty() }?.joinToString(" AND "),
             args.takeIf { it.isNotEmpty() }?.toTypedArray(),
             null, null, "received_at DESC", limit.toString(),
@@ -107,7 +122,7 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
                     LedgerEvent(
                         sender = cursor.getString(0), receivedAt = cursor.getLong(1), category = cursor.getString(2),
                         amount = if (cursor.isNull(3)) null else cursor.getDouble(3),
-                        instrument = cursor.getString(4), counterparty = cursor.getString(5), body = cursor.getString(6),
+                        instrument = cursor.getString(4), counterparty = cursor.getString(5), body = cursor.getString(6), companyName = cursor.getString(7),
                     )
                 )
             }
@@ -146,30 +161,50 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         "companies", null, ContentValues().apply { put("name", name.trim()) }, SQLiteDatabase.CONFLICT_IGNORE,
     ) != -1L
 
-    fun instruments(): List<FinancialInstrument> = readableDatabase.rawQuery("""
-        SELECT e.instrument, e.sender, MAX(e.body), COUNT(*), c.name, i.role
-        FROM events e
-        LEFT JOIN instruments i ON i.reference = e.instrument
-        LEFT JOIN companies c ON c.id = i.company_id
-        WHERE e.instrument IS NOT NULL AND e.instrument != ''
-        GROUP BY e.instrument, e.sender
-        ORDER BY c.name IS NULL DESC, COUNT(*) DESC
-    """.trimIndent(), null).use { cursor ->
-        buildList {
-            while (cursor.moveToNext()) {
-                val sample = cursor.getString(2).orEmpty()
-                add(FinancialInstrument(
-                    reference = cursor.getString(0), bankSender = cursor.getString(1),
-                    kind = if (sample.contains("بطاقة") || sample.contains("مدى")) "بطاقة" else "حساب",
-                    companyName = cursor.getString(4), role = cursor.getString(5), events = cursor.getInt(3),
+    fun instruments(): List<FinancialInstrument> {
+        val linked = readableDatabase.rawQuery("""
+            SELECT i.reference, i.bank_sender, i.kind, c.name, i.role, i.parent_reference, COUNT(e.id)
+            FROM instruments i
+            JOIN companies c ON c.id = i.company_id
+            LEFT JOIN events e ON e.instrument = i.reference
+            GROUP BY i.reference, i.bank_sender, i.kind, c.name, i.role, i.parent_reference
+            ORDER BY c.name, i.reference
+        """.trimIndent(), null).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(FinancialInstrument(
+                    reference = cursor.getString(0), bankSender = cursor.getString(1), kind = cursor.getString(2),
+                    companyName = cursor.getString(3), role = cursor.getString(4), parentReference = cursor.getString(5), events = cursor.getInt(6),
                 ))
             }
         }
+        val unlinked = readableDatabase.rawQuery("""
+            SELECT e.instrument, e.sender, MAX(e.body), COUNT(*)
+            FROM events e
+            LEFT JOIN instruments i ON i.reference = e.instrument
+            WHERE e.instrument IS NOT NULL AND e.instrument != '' AND i.reference IS NULL
+            GROUP BY e.instrument, e.sender
+            ORDER BY COUNT(*) DESC
+        """.trimIndent(), null).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    val sample = cursor.getString(2).orEmpty()
+                    add(FinancialInstrument(
+                        reference = cursor.getString(0), bankSender = cursor.getString(1),
+                        kind = if (sample.contains("بطاقة") || sample.contains("مدى")) "بطاقة" else "حساب",
+                        companyName = null, role = null, parentReference = null, events = cursor.getInt(3),
+                    ))
+                }
+            }
+        }
+        return linked + unlinked
     }
 
-    fun assignInstrument(reference: String, sender: String, kind: String, companyId: Long, role: String) {
+    fun assignInstrument(reference: String, sender: String, kind: String, companyId: Long, role: String, parentReference: String? = null) {
+        val preservedParent = parentReference ?: readableDatabase.query(
+            "instruments", arrayOf("parent_reference"), "reference = ?", arrayOf(reference), null, null, null,
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
         writableDatabase.insertWithOnConflict("instruments", null, ContentValues().apply {
-            put("reference", reference); put("bank_sender", sender); put("kind", kind); put("company_id", companyId); put("role", role)
+            put("reference", reference); put("bank_sender", sender); put("kind", kind); put("company_id", companyId); put("role", role); preservedParent?.let { put("parent_reference", it) }
         }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
@@ -181,9 +216,37 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
         db.execSQL("CREATE TABLE IF NOT EXISTS companies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)")
         db.execSQL("""CREATE TABLE IF NOT EXISTS instruments (
             reference TEXT PRIMARY KEY, bank_sender TEXT NOT NULL, kind TEXT NOT NULL,
-            company_id INTEGER NOT NULL, role TEXT NOT NULL,
+            company_id INTEGER NOT NULL, role TEXT NOT NULL, parent_reference TEXT,
             FOREIGN KEY(company_id) REFERENCES companies(id)
         )""".trimIndent())
+    }
+
+    private fun seedCompanyDirectory(db: SQLiteDatabase) {
+        CompanyRules.defaultCompanies.forEach { name ->
+            db.insertWithOnConflict("companies", null, ContentValues().apply { put("name", name) }, SQLiteDatabase.CONFLICT_IGNORE)
+        }
+        CompanyRules.proposals.forEach { proposal ->
+            val companyId = db.rawQuery("SELECT id FROM companies WHERE name = ?", arrayOf(proposal.companyName)).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getLong(0) else null
+            } ?: return@forEach
+            db.insertWithOnConflict("instruments", null, ContentValues().apply {
+                put("reference", proposal.reference)
+                put("bank_sender", proposal.bankSender)
+                put("kind", proposal.kind)
+                put("company_id", companyId)
+                put("role", proposal.role)
+                proposal.parentReference?.let { put("parent_reference", it) }
+            }, SQLiteDatabase.CONFLICT_IGNORE)
+        }
+    }
+
+    private fun backfillCompanyNames(db: SQLiteDatabase) {
+        db.query("events", arrayOf("id", "sender", "body"), null, null, null, null, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                val company = CompanyRules.inferCompany(cursor.getString(1), cursor.getString(2)) ?: continue
+                db.update("events", ContentValues().apply { put("company_name", company) }, "id = ?", arrayOf(cursor.getLong(0).toString()))
+            }
+        }
     }
 }
 
@@ -213,8 +276,12 @@ object BankEventParser {
         return patterns.firstNotNullOfOrNull { it.find(body)?.groupValues?.getOrNull(1)?.replace(',', '.')?.toDoubleOrNull() }
     }
 
-    private fun instrument(body: String): String? = Regex("(?:البطاقة|بطاقه|حسابك|حساب|مدى-أثير|By)\\s*[:：]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE)
-        .find(body)?.groupValues?.getOrNull(1)
+    private fun instrument(body: String): String? = listOf(
+        Regex("(?:البطاقة|بطاقه|مدى-أثير|By)\\s*[:：;]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
+        Regex("(?:حسابك|من)\\s*[:：]?\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
+        Regex("From\\s*:\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
+        Regex("To\\s*:\\s*([0-9*]{4,})", RegexOption.IGNORE_CASE),
+    ).firstNotNullOfOrNull { it.find(body)?.groupValues?.getOrNull(1)?.trim('*') }
 
     private fun counterparty(body: String): String? = Regex("(?:At|من)\\s*[:：]?\\s*([^\\n]{3,60})", RegexOption.IGNORE_CASE)
         .find(body)?.groupValues?.getOrNull(1)?.trim()

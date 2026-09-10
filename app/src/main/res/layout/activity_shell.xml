@@ -98,6 +98,19 @@
                 android:layout_marginTop="8dp"
                 android:scrollbars="none">
                 <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/operationCompanyChips"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="8dp"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:scrollbars="none">
+                <com.google.android.material.chip.ChipGroup
                     android:id="@+id/operationBankChips"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -158,6 +171,8 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="الحسابات والبطاقات" android:textColor="@color/text_primary" android:textSize="30sp" android:textStyle="bold" />
                 <TextView android:id="@+id/accountsOverview" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/text_secondary" android:textSize="15sp" android:lineSpacingExtra="5dp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="الربط المستنتج من عينة الرسائل" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" />
+                <TextView android:id="@+id/accountSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/text_secondary" android:textSize="14sp" android:lineSpacingExtra="5dp" />
                 <com.google.android.material.button.MaterialButton android:id="@+id/openAccountManager" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="22dp" android:text="ربط الحسابات والبطاقات المكتشفة" android:textColor="@color/on_primary" app:backgroundTint="@color/primary_action" app:cornerRadius="16dp" />
             </LinearLayout>
         </ScrollView>

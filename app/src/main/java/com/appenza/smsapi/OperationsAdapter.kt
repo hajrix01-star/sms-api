@@ -34,7 +34,8 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         holder.category.text = event.category
         holder.amount.text = event.amount?.let { "SAR ${amountFormat.format(it)}" } ?: "—"
         val reference = event.instrument?.let { " · $it" }.orEmpty()
-        holder.meta.text = "${event.sender}$reference · ${dateFormat.format(Date(event.receivedAt))}"
+        val company = event.companyName?.let { "$it · " }.orEmpty()
+        holder.meta.text = "$company${event.sender}$reference · ${dateFormat.format(Date(event.receivedAt))}"
         holder.counterparty.text = event.counterparty?.let { "الطرف: $it" }.orEmpty()
         holder.counterparty.visibility = if (event.counterparty.isNullOrBlank()) View.GONE else View.VISIBLE
         holder.preview.text = event.body.replace(Regex("\\s+"), " ").trim()
