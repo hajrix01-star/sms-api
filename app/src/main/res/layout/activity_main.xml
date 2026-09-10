@@ -1,23 +1,217 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SMS API" android:textSize="30sp" android:textStyle="bold" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/app_subtitle" android:layout_marginTop="4dp" />
-  <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="غير مفعّل" android:textStyle="bold" android:padding="16dp" android:layout_marginTop="20dp" android:background="#E6F4EA" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مرسلو البنوك" android:textStyle="bold" android:layout_marginTop="20dp" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="أضف اسم المرسل كما يظهر في SMS، مثل ALAHLI أو ALRAJHI." />
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-   <EditText android:id="@+id/senderInput" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="اسم المرسل" />
-   <Button android:id="@+id/addSender" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="إضافة" />
-  </LinearLayout>
-  <com.google.android.material.chip.ChipGroup android:id="@+id/senderChips" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="رابط Baseer API" android:textStyle="bold" android:layout_marginTop="20dp" />
-  <EditText android:id="@+id/apiUrl" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="https://baseer.example.com/api/v1/bank-sms" android:inputType="textUri" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="مفتاح ربط الجهاز" android:textStyle="bold" android:layout_marginTop="12dp" />
-  <EditText android:id="@+id/apiToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="يصدر من بصير" android:inputType="textPassword" />
-  <Button android:id="@+id/enable" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="حفظ وتفعيل" android:layout_marginTop="24dp" />
-  <Button android:id="@+id/test" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="إرسال رسالة اختبار" />
-  <Button android:id="@+id/disable" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="إيقاف التحويل" />
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="لا يقرأ التطبيق سجل الرسائل القديم ولا يفتح واتساب. رسائل رموز التحقق مستبعدة." android:layout_marginTop="16dp" />
- </LinearLayout>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#111018"
+    android:fillViewport="true"
+    android:layoutDirection="rtl">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans"
+            android:letterSpacing="0.04"
+            android:text="SMS API"
+            android:textColor="#F4EFF4"
+            android:textDirection="ltr"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/app_subtitle"
+            android:textColor="#CFC7D2"
+            android:textSize="16sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="#173A2E"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#29634E"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp"
+                android:text="الحالة: غير مفعّل"
+                android:textColor="#E4F5EA"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="مرسلو البنوك"
+            android:textColor="#F4EFF4"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="أضف اسم المرسل كما يظهر في SMS، مثل ALAHLI أو ALRAJHI."
+            android:textColor="#CFC7D2"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="اسم المرسل"
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="#68B497"
+                app:hintTextColor="#CFC7D2">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/senderInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="#F4EFF4"
+                    android:textColorHint="#89818D" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/addSender"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:layout_marginStart="10dp"
+                android:text="إضافة"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#16805D"
+                app:cornerRadius="16dp" />
+        </LinearLayout>
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/senderChips"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:chipSpacingHorizontal="8dp"
+            app:chipSpacingVertical="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="رابط Baseer API"
+            android:textColor="#F4EFF4"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="https://baseer.example.com/api/v1/bank-sms"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="#68B497"
+            app:hintTextColor="#89818D">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/apiUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textUri"
+                android:textColor="#F4EFF4"
+                android:textColorHint="#89818D"
+                android:textDirection="ltr" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="مفتاح ربط الجهاز"
+            android:textColor="#F4EFF4"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="يصدر من بصير"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="#68B497"
+            app:hintTextColor="#89818D">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/apiToken"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textColor="#F4EFF4"
+                android:textColorHint="#89818D" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/enable"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="28dp"
+            android:text="حفظ وتفعيل"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            app:backgroundTint="#16805D"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/test"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="إرسال رسالة اختبار"
+            android:textColor="#DDF7EA"
+            app:backgroundTint="#244A3C"
+            app:cornerRadius="16dp"
+            app:strokeColor="#68B497"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/disable"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="إيقاف التحويل"
+            android:textColor="#F6D9DB"
+            app:backgroundTint="#392426"
+            app:cornerRadius="16dp"
+            app:strokeColor="#8D5157"
+            app:strokeWidth="1dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp"
+            android:lineSpacingExtra="4dp"
+            android:text="لا يقرأ التطبيق سجل الرسائل القديم ولا يفتح واتساب. رسائل رموز التحقق مستبعدة."
+            android:textColor="#B8B0BC"
+            android:textSize="14sp" />
+    </LinearLayout>
 </ScrollView>
