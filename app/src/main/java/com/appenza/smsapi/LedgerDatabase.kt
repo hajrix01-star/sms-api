@@ -33,7 +33,7 @@ data class CustodySummary(
 )
 
 /** Local-only event ledger. SQLite handles indexed reads without keeping messages in memory. */
-class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 7) {
+class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.db", null, 8) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE events (
@@ -76,6 +76,10 @@ class LedgerDatabase(context: Context) : SQLiteOpenHelper(context, "bank_ledger.
             // Old versions could retain OTP or beneficiary-setup notices in the local ledger.
             // They are security/administrative messages, not financial operations.
             removeSecurityEvents(db)
+            backfillCompanyNames(db)
+        }
+        if (oldVersion < 8) {
+            // Re-evaluate existing messages using the RTL-safe masked-account rules.
             backfillCompanyNames(db)
         }
         seedCompanyDirectory(db)

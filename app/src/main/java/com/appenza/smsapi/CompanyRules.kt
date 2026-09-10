@@ -73,21 +73,31 @@ object CompanyRules {
         ),
     )
 
-    fun inferCompany(sender: String, body: String): String? = when {
-        body.contains("ARZ RESTURANT", ignoreCase = true) ||
-            (sender.equals("AlRajhiBank", ignoreCase = true) && body.contains("From:2029", ignoreCase = true)) -> "شركة أرز"
-        body.contains("MASHWEYAT ALMUALEM GRILL", ignoreCase = true) ||
-            body.contains("مطعم مشويات المعلم الشامي", ignoreCase = true) ||
-            (sender.equals("AlRajhiBank", ignoreCase = true) && (body.contains("From:5204", ignoreCase = true) || body.contains("From:1296", ignoreCase = true))) ||
-            Regex("375\\*{3}204").containsMatchIn(body) -> "شركة المعلم الشامي"
-        body.contains("مؤسسة دوحة المستهلك التجارية") ||
-            (sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(body)) -> "مؤسسة دوحة المستهلك التجارية"
-        sender.equals("SNB-AlAhli", ignoreCase = true) && body.contains("2237", ignoreCase = true) -> "نطاق شخصي — الأهلي"
-        sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*\\*?0305\\*?").containsMatchIn(body) -> "نطاق شخصي — الأهلي"
-        sender.equals("AlRajhiBank", ignoreCase = true) && body.contains("By:0187", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
-        sender.equals("AlRajhiBank", ignoreCase = true) && body.contains("From:1994", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
+    fun inferCompany(sender: String, body: String): String? {
+        // Some Android SMS apps insert invisible RTL/LTR markers around masked account values.
+        // Remove them before matching, otherwise 375***204 is missed despite being visible on screen.
+        val text = body.replace(Regex("[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]"), "")
+        return when {
+        text.contains("ARZ RESTURANT", ignoreCase = true) ||
+            (sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("From:2029", ignoreCase = true)) ||
+            hasMaskedAccount(text, "989", "029") -> "شركة أرز"
+        text.contains("MASHWEYAT ALMUALEM GRILL", ignoreCase = true) ||
+            text.contains("مطعم مشويات المعلم الشامي", ignoreCase = true) ||
+            (sender.equals("AlRajhiBank", ignoreCase = true) && (text.contains("From:5204", ignoreCase = true) || text.contains("From:1296", ignoreCase = true))) ||
+            hasMaskedAccount(text, "375", "204") || hasMaskedAccount(text, "375", "296") -> "شركة المعلم الشامي"
+        text.contains("مؤسسة دوحة المستهلك التجارية") ||
+            (sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*0409\\*").containsMatchIn(text)) -> "مؤسسة دوحة المستهلك التجارية"
+        sender.equals("SNB-AlAhli", ignoreCase = true) && text.contains("2237", ignoreCase = true) -> "نطاق شخصي — الأهلي"
+        sender.equals("SNB-AlAhli", ignoreCase = true) && Regex("(?:من|حسابك)\\s*[:：]?\\s*\\*?0305\\*?").containsMatchIn(text) -> "نطاق شخصي — الأهلي"
+        sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("By:0187", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
+        sender.equals("AlRajhiBank", ignoreCase = true) && text.contains("From:1994", ignoreCase = true) -> "عهدة — أسامة (مندوب المشتريات)"
         else -> null
+        }
     }
+
+    private fun hasMaskedAccount(value: String, prefix: String, suffix: String): Boolean =
+        Regex("$prefix\\*{3}$suffix").containsMatchIn(value) ||
+            Regex("$suffix\\*{3}$prefix").containsMatchIn(value)
 
     fun ambiguousSuggestions() = emptyList<String>()
 }

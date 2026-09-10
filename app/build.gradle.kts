@@ -11,14 +11,25 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 19
-        versionName = "0.16.0-review-queue"
+        versionCode = 21
+        versionName = "0.17.0-stable-signing"
+    }
+
+    signingConfigs {
+        create("stableRelease") {
+            // Values exist only in GitHub Actions Secrets. The key never enters this repository.
+            storeFile = file(System.getenv("SMS_API_KEYSTORE_PATH") ?: "missing-signing-key")
+            storePassword = System.getenv("SMS_API_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("SMS_API_KEY_ALIAS")
+            keyPassword = System.getenv("SMS_API_KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("stableRelease")
         }
         debug {
             isMinifyEnabled = false
