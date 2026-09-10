@@ -53,6 +53,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var instrumentDirectory: TextView
     private lateinit var dashboardStatus: TextView
     private lateinit var dashboardSummary: TextView
+    private lateinit var dashboardTotalMetric: TextView
+    private lateinit var dashboardIncomingMetric: TextView
+    private lateinit var dashboardOutgoingMetric: TextView
+    private lateinit var dashboardFeesMetric: TextView
+    private lateinit var dashboardReviewMetric: TextView
     private lateinit var custodySummary: TextView
     private lateinit var operationsAdapter: OperationsAdapter
     private lateinit var operationFilterSummary: TextView
@@ -100,6 +105,11 @@ class MainActivity : AppCompatActivity() {
         instrumentDirectory = findViewById(R.id.instrumentDirectory)
         dashboardStatus = findViewById(R.id.dashboardStatus)
         dashboardSummary = findViewById(R.id.dashboardSummary)
+        dashboardTotalMetric = findViewById(R.id.dashboardTotalMetric)
+        dashboardIncomingMetric = findViewById(R.id.dashboardIncomingMetric)
+        dashboardOutgoingMetric = findViewById(R.id.dashboardOutgoingMetric)
+        dashboardFeesMetric = findViewById(R.id.dashboardFeesMetric)
+        dashboardReviewMetric = findViewById(R.id.dashboardReviewMetric)
         custodySummary = findViewById(R.id.custodySummary)
         operationFilterSummary = findViewById(R.id.operationsFilterSummary)
         operationsEmpty = findViewById(R.id.operationsEmpty)
@@ -143,6 +153,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.addCompany).setOnClickListener { showAddCompanyDialog() }
         findViewById<Button>(R.id.manageInstruments).setOnClickListener { showInstrumentManager() }
         findViewById<Button>(R.id.openAccountManager).setOnClickListener { showInstrumentManager() }
+        findViewById<Button>(R.id.openOperations).setOnClickListener { showPage(R.id.operationsPage) }
         importUntil.setOnClickListener { showDatePicker() }
         findViewById<Button>(R.id.disable).setOnClickListener {
             RelayStore.preferences(this).edit()
@@ -869,6 +880,12 @@ class MainActivity : AppCompatActivity() {
         val summary = RelayStore.summary(this)
         dashboardStatus.text = if (isEnabled && hasPermission) "الاستقبال المباشر يعمل. لا توجد خدمة دائمة في الذاكرة." else "الاستقبال غير مفعّل أو يحتاج إذن SMS."
         val reviewCount = database.reviewCount()
+        dashboardTotalMetric.text = summary.total.toString()
+        dashboardIncomingMetric.text = summary.incoming.toString()
+        dashboardOutgoingMetric.text = summary.outgoing.toString()
+        dashboardFeesMetric.text = summary.fees.toString()
+        dashboardReviewMetric.text = reviewCount.toString()
+        // Kept for backwards-compatible state restoration; the visible dashboard uses metric cards.
         dashboardSummary.text = "إجمالي العمليات: ${summary.total}\nإيداعات وتسويات: ${summary.incoming}\nمشتريات وتحويلات وسحب: ${summary.outgoing}\nرسوم بنكية: ${summary.fees}\nتحتاج مراجعة: $reviewCount"
         findViewById<Button>(R.id.openReviewQueue).apply {
             text = if (reviewCount == 0) "لا توجد رسائل تحتاج مراجعة" else "مراجعة $reviewCount رسالة غير مكتملة الربط أو التصنيف"
