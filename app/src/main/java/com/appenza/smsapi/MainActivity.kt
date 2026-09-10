@@ -30,6 +30,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.navigation.NavigationView
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -263,49 +264,7 @@ class MainActivity : AppCompatActivity() {
             adapter = operationsAdapter
             setHasFixedSize(true)
         }
-        findViewById<Chip>(R.id.periodAll).setOnClickListener {
-            operationDays = null
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = null
-            renderOperations()
-        }
-        findViewById<Chip>(R.id.period7Days).setOnClickListener {
-            operationDays = 7
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = null
-            renderOperations()
-        }
-        findViewById<Chip>(R.id.period30Days).setOnClickListener {
-            operationDays = 30
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = null
-            renderOperations()
-        }
-        findViewById<Chip>(R.id.periodThisMonth).setOnClickListener {
-            operationDays = null
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = CalendarMonthFilter.THIS_MONTH
-            renderOperations()
-        }
-        findViewById<Chip>(R.id.periodLastMonth).setOnClickListener {
-            operationDays = null
-            operationFromMillis = null
-            operationToMillis = null
-            operationMonthFilter = CalendarMonthFilter.LAST_MONTH
-            renderOperations()
-        }
-        findViewById<Chip>(R.id.operationReviewChip).setOnClickListener { chip ->
-            operationReviewOnly = (chip as Chip).isChecked
-            renderOperations()
-        }
-        operationFiltersToggle.setOnClickListener {
-            operationFiltersExpanded = !operationFiltersExpanded
-            renderOperationFilterControls()
-        }
+        operationFiltersToggle.setOnClickListener { showOperationsFilterSheet() }
         findViewById<Button>(R.id.operationReanalyze).setOnClickListener {
             Thread {
                 val scanned = LedgerDatabase(this).reanalyzeAll()
@@ -469,30 +428,6 @@ class MainActivity : AppCompatActivity() {
     private fun renderOperations() {
         val database = LedgerDatabase(this)
         renderOperationFilterControls()
-        findViewById<Chip>(R.id.periodAll).isChecked = operationDays == null && operationFromMillis == null && operationMonthFilter == null
-        findViewById<Chip>(R.id.period7Days).isChecked = operationDays == 7
-        findViewById<Chip>(R.id.period30Days).isChecked = operationDays == 30
-        findViewById<Chip>(R.id.periodThisMonth).isChecked = operationMonthFilter == CalendarMonthFilter.THIS_MONTH
-        findViewById<Chip>(R.id.periodLastMonth).isChecked = operationMonthFilter == CalendarMonthFilter.LAST_MONTH
-        findViewById<Chip>(R.id.operationReviewChip).isChecked = operationReviewOnly
-        renderOperationChips(
-            operationCompanyChips,
-            "كل الجهات والحسابات",
-            database.companies().map { it.name },
-            operationCompany,
-        ) { operationCompany = it }
-        renderOperationChips(
-            operationBankChips,
-            "كل البنوك والمرسلين",
-            database.sendersWithEvents(),
-            operationSender,
-        ) { operationSender = it }
-        renderOperationChips(
-            operationCategoryChips,
-            "كل الأنواع",
-            database.categoriesWithEvents(),
-            operationCategory,
-        ) { operationCategory = it }
         val (operationFrom, operationTo) = operationWindow()
         val events = database.events(
             days = operationDays,
@@ -527,12 +462,97 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderOperationFilterControls() {
-        operationAdvancedFilters.visibility = if (operationFiltersExpanded) View.VISIBLE else View.GONE
-        val activeFilters = listOf(operationCompany, operationSender, operationCategory).count { it != null }
-        operationFiltersToggle.text = when {
-            operationFiltersExpanded -> "إخفاء الفلاتر"
-            activeFilters > 0 -> "فلاتر ($activeFilters)"
-            else -> "فلاتر"
+        operationAdvancedFilters.visibility = View.GONE
+        val activeFilters = listOf(
+            operationCompany,
+            operationSender,
+            operationCategory,
+            operationBodyKeywords.takeIf { it.isNotEmpty() },
+            operationDays,
+            operationFromMillis,
+            operationMonthFilter,
+        ).count { it != null } + if (operationReviewOnly) 1 else 0
+        operationFiltersToggle.text = if (activeFilters > 0) "فلترة ($activeFilters)" else "فلترة"
+    }
+
+    private fun showOperationsFilterSheet() {
+        val database = LedgerDatabase(this)
+        val sheet = BottomSheetDialog(this)
+        val content = layoutInflater.inflate(R.layout.sheet_operation_filters, null)
+        sheet.setContentView(content)
+
+        fun choosePeriod(days: Int? = null, month: CalendarMonthFilter? = null) {
+            operationDays = days
+            operationFromMillis = null
+            operationToMillis = null
+            operationMonthFilter = month
+        }
+        content.findViewById<Chip>(R.id.sheetPeriodAll).setOnClickListener { choosePeriod() }
+        content.findViewById<Chip>(R.id.sheetPeriodThisMonth).setOnClickListener { choosePeriod(month = CalendarMonthFilter.THIS_MONTH) }
+        content.findViewById<Chip>(R.id.sheetPeriodLastMonth).setOnClickListener { choosePeriod(month = CalendarMonthFilter.LAST_MONTH) }
+        content.findViewById<Chip>(R.id.sheetPeriod7Days).setOnClickListener { choosePeriod(days = 7) }
+        content.findViewById<Chip>(R.id.sheetPeriod30Days).setOnClickListener { choosePeriod(days = 30) }
+        content.findViewById<Chip>(R.id.sheetPeriodAll).isChecked = operationDays == null && operationFromMillis == null && operationMonthFilter == null
+        content.findViewById<Chip>(R.id.sheetPeriodThisMonth).isChecked = operationMonthFilter == CalendarMonthFilter.THIS_MONTH
+        content.findViewById<Chip>(R.id.sheetPeriodLastMonth).isChecked = operationMonthFilter == CalendarMonthFilter.LAST_MONTH
+        content.findViewById<Chip>(R.id.sheetPeriod7Days).isChecked = operationDays == 7
+        content.findViewById<Chip>(R.id.sheetPeriod30Days).isChecked = operationDays == 30
+        content.findViewById<Chip>(R.id.sheetReviewChip).isChecked = operationReviewOnly
+        content.findViewById<Chip>(R.id.sheetReviewChip).setOnClickListener { chip -> operationReviewOnly = (chip as Chip).isChecked }
+
+        renderOperationChips(
+            content.findViewById(R.id.sheetCompanyChips),
+            "كل الجهات والحسابات",
+            database.companies().map { it.name },
+            operationCompany,
+        ) {
+            operationCompany = it
+            operationScopeLabel = null
+            operationCustodyOnly = false
+            operationBodyKeywords = emptyList()
+        }
+        renderOperationChips(
+            content.findViewById(R.id.sheetBankChips),
+            "كل البنوك والمرسلين",
+            database.sendersWithEvents(),
+            operationSender,
+        ) {
+            operationSender = it
+            operationScopeLabel = null
+            operationCustodyOnly = false
+            operationBodyKeywords = emptyList()
+        }
+        renderOperationChips(
+            content.findViewById(R.id.sheetCategoryChips),
+            "كل الأنواع",
+            database.categoriesWithEvents(),
+            operationCategory,
+        ) {
+            operationCategory = it
+            operationScopeLabel = null
+            operationCustodyOnly = false
+            operationBodyKeywords = emptyList()
+        }
+
+        content.findViewById<Button>(R.id.sheetClearFilters).setOnClickListener {
+            operationDays = null
+            operationFromMillis = null
+            operationToMillis = null
+            operationMonthFilter = null
+            operationCompany = null
+            operationSender = null
+            operationCategory = null
+            operationReviewOnly = false
+            operationCustodyOnly = false
+            operationBodyKeywords = emptyList()
+            operationScopeLabel = null
+            operationSearch.setText("")
+            renderOperations()
+            sheet.dismiss()
+        }
+        content.findViewById<Button>(R.id.sheetApplyFilters).setOnClickListener {
+            renderOperations()
+            sheet.dismiss()
         }
     }
 
