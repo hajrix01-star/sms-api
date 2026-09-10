@@ -42,6 +42,8 @@ import org.json.JSONObject
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
+    private enum class CalendarMonthFilter { THIS_MONTH, LAST_MONTH }
+
     private lateinit var chips: ChipGroup
     private lateinit var status: TextView
     private lateinit var input: EditText
@@ -84,9 +86,11 @@ class MainActivity : AppCompatActivity() {
     private var operationFiltersExpanded = false
     private var operationFromMillis: Long? = null
     private var operationToMillis: Long? = null
+    private var operationMonthFilter: CalendarMonthFilter? = null
     private var dashboardDays: Int? = null
     private var dashboardFromMillis: Long? = null
     private var dashboardToMillis: Long? = null
+    private var dashboardMonthFilter: CalendarMonthFilter? = null
 
     override fun attachBaseContext(newBase: Context) {
         val darkMode = newBase.getSharedPreferences("sms_api", Context.MODE_PRIVATE)
@@ -263,18 +267,35 @@ class MainActivity : AppCompatActivity() {
             operationDays = null
             operationFromMillis = null
             operationToMillis = null
+            operationMonthFilter = null
             renderOperations()
         }
         findViewById<Chip>(R.id.period7Days).setOnClickListener {
             operationDays = 7
             operationFromMillis = null
             operationToMillis = null
+            operationMonthFilter = null
             renderOperations()
         }
         findViewById<Chip>(R.id.period30Days).setOnClickListener {
             operationDays = 30
             operationFromMillis = null
             operationToMillis = null
+            operationMonthFilter = null
+            renderOperations()
+        }
+        findViewById<Chip>(R.id.periodThisMonth).setOnClickListener {
+            operationDays = null
+            operationFromMillis = null
+            operationToMillis = null
+            operationMonthFilter = CalendarMonthFilter.THIS_MONTH
+            renderOperations()
+        }
+        findViewById<Chip>(R.id.periodLastMonth).setOnClickListener {
+            operationDays = null
+            operationFromMillis = null
+            operationToMillis = null
+            operationMonthFilter = CalendarMonthFilter.LAST_MONTH
             renderOperations()
         }
         findViewById<Chip>(R.id.operationReviewChip).setOnClickListener { chip ->
@@ -307,18 +328,35 @@ class MainActivity : AppCompatActivity() {
             dashboardDays = null
             dashboardFromMillis = null
             dashboardToMillis = null
+            dashboardMonthFilter = null
             render()
         }
         findViewById<Chip>(R.id.dashboardPeriod7Days).setOnClickListener {
             dashboardDays = 7
             dashboardFromMillis = null
             dashboardToMillis = null
+            dashboardMonthFilter = null
             render()
         }
         findViewById<Chip>(R.id.dashboardPeriod30Days).setOnClickListener {
             dashboardDays = 30
             dashboardFromMillis = null
             dashboardToMillis = null
+            dashboardMonthFilter = null
+            render()
+        }
+        findViewById<Chip>(R.id.dashboardPeriodThisMonth).setOnClickListener {
+            dashboardDays = null
+            dashboardFromMillis = null
+            dashboardToMillis = null
+            dashboardMonthFilter = CalendarMonthFilter.THIS_MONTH
+            render()
+        }
+        findViewById<Chip>(R.id.dashboardPeriodLastMonth).setOnClickListener {
+            dashboardDays = null
+            dashboardFromMillis = null
+            dashboardToMillis = null
+            dashboardMonthFilter = CalendarMonthFilter.LAST_MONTH
             render()
         }
         findViewById<Chip>(R.id.dashboardPeriodCustom).setOnClickListener { showDashboardDateRangePicker() }
@@ -349,6 +387,7 @@ class MainActivity : AppCompatActivity() {
         operationDays = null
         operationFromMillis = fromMillis
         operationToMillis = toMillis
+        operationMonthFilter = dashboardMonthFilter
         operationSearch.setText("")
         showPage(R.id.operationsPage)
     }
@@ -356,7 +395,29 @@ class MainActivity : AppCompatActivity() {
     private fun dashboardWindow(): Pair<Long?, Long?> = when {
         dashboardFromMillis != null -> dashboardFromMillis to dashboardToMillis
         dashboardDays != null -> (System.currentTimeMillis() - dashboardDays!! * 86_400_000L) to System.currentTimeMillis()
+        dashboardMonthFilter != null -> calendarMonthWindow(dashboardMonthFilter!!)
         else -> null to null
+    }
+
+    private fun operationWindow(): Pair<Long?, Long?> = when {
+        operationFromMillis != null -> operationFromMillis to operationToMillis
+        operationDays != null -> (System.currentTimeMillis() - operationDays!! * 86_400_000L) to System.currentTimeMillis()
+        operationMonthFilter != null -> calendarMonthWindow(operationMonthFilter!!)
+        else -> null to null
+    }
+
+    private fun calendarMonthWindow(filter: CalendarMonthFilter): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+        if (filter == CalendarMonthFilter.LAST_MONTH) calendar.add(Calendar.MONTH, -1)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val from = calendar.timeInMillis
+        calendar.add(Calendar.MONTH, 1)
+        calendar.add(Calendar.MILLISECOND, -1)
+        return from to calendar.timeInMillis
     }
 
     private fun showDashboardDateRangePicker() {
@@ -378,6 +439,7 @@ class MainActivity : AppCompatActivity() {
                             dashboardDays = null
                             dashboardFromMillis = from
                             dashboardToMillis = to
+                            dashboardMonthFilter = null
                             render()
                         }
                     },
@@ -407,6 +469,11 @@ class MainActivity : AppCompatActivity() {
     private fun renderOperations() {
         val database = LedgerDatabase(this)
         renderOperationFilterControls()
+        findViewById<Chip>(R.id.periodAll).isChecked = operationDays == null && operationFromMillis == null && operationMonthFilter == null
+        findViewById<Chip>(R.id.period7Days).isChecked = operationDays == 7
+        findViewById<Chip>(R.id.period30Days).isChecked = operationDays == 30
+        findViewById<Chip>(R.id.periodThisMonth).isChecked = operationMonthFilter == CalendarMonthFilter.THIS_MONTH
+        findViewById<Chip>(R.id.periodLastMonth).isChecked = operationMonthFilter == CalendarMonthFilter.LAST_MONTH
         findViewById<Chip>(R.id.operationReviewChip).isChecked = operationReviewOnly
         renderOperationChips(
             operationCompanyChips,
@@ -426,10 +493,11 @@ class MainActivity : AppCompatActivity() {
             database.categoriesWithEvents(),
             operationCategory,
         ) { operationCategory = it }
+        val (operationFrom, operationTo) = operationWindow()
         val events = database.events(
             days = operationDays,
-            fromMillis = operationFromMillis,
-            toMillis = operationToMillis,
+            fromMillis = operationFrom,
+            toMillis = operationTo,
             sender = operationSender,
             category = operationCategory,
             companyName = operationCompany,
@@ -446,7 +514,7 @@ class MainActivity : AppCompatActivity() {
             isEnabled = reviewCount > 0
         }
         val window = when {
-            operationFromMillis != null -> formatPeriod(operationFromMillis, operationToMillis)
+            operationFrom != null -> formatPeriod(operationFrom, operationTo)
             else -> when (operationDays) {
             7 -> "آخر 7 أيام"
             30 -> "آخر 30 يوم"
@@ -1016,10 +1084,12 @@ class MainActivity : AppCompatActivity() {
         val reviewCount = database.reviewCount()
         val (dashboardFrom, dashboardTo) = dashboardWindow()
         dashboardPeriodLabel.text = formatPeriod(dashboardFrom, dashboardTo)
-        findViewById<Chip>(R.id.dashboardPeriodAll).isChecked = dashboardDays == null && dashboardFrom == null
+        findViewById<Chip>(R.id.dashboardPeriodAll).isChecked = dashboardDays == null && dashboardFrom == null && dashboardMonthFilter == null
         findViewById<Chip>(R.id.dashboardPeriod7Days).isChecked = dashboardDays == 7
         findViewById<Chip>(R.id.dashboardPeriod30Days).isChecked = dashboardDays == 30
-        findViewById<Chip>(R.id.dashboardPeriodCustom).isChecked = dashboardFrom != null
+        findViewById<Chip>(R.id.dashboardPeriodThisMonth).isChecked = dashboardMonthFilter == CalendarMonthFilter.THIS_MONTH
+        findViewById<Chip>(R.id.dashboardPeriodLastMonth).isChecked = dashboardMonthFilter == CalendarMonthFilter.LAST_MONTH
+        findViewById<Chip>(R.id.dashboardPeriodCustom).isChecked = dashboardFromMillis != null
         renderFlow(arzFlowText, database.financialFlow("شركة أرز", dashboardFrom, dashboardTo))
         renderFlow(muallamFlowText, database.financialFlow("شركة المعلم الشامي", dashboardFrom, dashboardTo))
         renderFlow(dohaFlowText, database.financialFlow("مؤسسة دوحة المستهلك التجارية", dashboardFrom, dashboardTo))
@@ -1035,6 +1105,10 @@ class MainActivity : AppCompatActivity() {
                 operationBodyKeywords = emptyList()
                 operationScopeLabel = null
                 operationCompany = null
+                operationDays = null
+                operationFromMillis = null
+                operationToMillis = null
+                operationMonthFilter = null
                 showPage(R.id.operationsPage)
             }
         }

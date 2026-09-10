@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 30
-        versionName = "0.19.0-company-cashflow"
+        versionCode = 31
+        versionName = "0.19.1-calendar-month-filters"
     }
 
     signingConfigs {

@@ -44,6 +44,8 @@
                         <TextView android:id="@+id/dashboardPeriodLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/text_secondary" android:textSize="13sp" />
                         <com.google.android.material.chip.ChipGroup android:id="@+id/dashboardPeriodChips" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" app:chipSpacingHorizontal="6dp" app:chipSpacingVertical="4dp" app:singleSelection="true">
                             <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:checkable="true" android:text="كل السجل" />
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodThisMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="هذا الشهر" />
+                            <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodLastMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="الشهر الماضي" />
                             <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriod7Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="7 أيام" />
                             <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriod30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="30 يوم" />
                             <com.google.android.material.chip.Chip android:id="@+id/dashboardPeriodCustom" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="من تاريخ إلى تاريخ" />
@@ -143,6 +145,8 @@
                         app:chipSpacingVertical="4dp"
                         app:singleSelection="true">
                         <com.google.android.material.chip.Chip android:id="@+id/periodAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:checkable="true" android:text="كل المدة" />
+                        <com.google.android.material.chip.Chip android:id="@+id/periodThisMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="هذا الشهر" />
+                        <com.google.android.material.chip.Chip android:id="@+id/periodLastMonth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="الشهر الماضي" />
                         <com.google.android.material.chip.Chip android:id="@+id/period7Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="7 أيام" />
                         <com.google.android.material.chip.Chip android:id="@+id/period30Days" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="30 يوم" />
                     </com.google.android.material.chip.ChipGroup>
