@@ -14,7 +14,8 @@ import java.util.Locale
 /** Keeps the operations page bounded and recyclable even when the local ledger grows. */
 class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
     private val items = mutableListOf<LedgerEvent>()
-    private val dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale("ar"))
+    private val dateFormat = DateFormat.getDateInstance(DateFormat.LONG, Locale("ar"))
+    private val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT, Locale("ar"))
     private val amountFormat = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
@@ -40,7 +41,9 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         holder.amount.setTextColor(ContextCompat.getColor(holder.itemView.context, directionColor(cashDirection)))
         val reference = event.instrument?.let { " · $it" }.orEmpty()
         val company = event.companyName?.let { "$it · " }.orEmpty()
-        holder.meta.text = "$company${event.sender}$reference · ${dateFormat.format(Date(event.receivedAt))}"
+        holder.meta.text = "$company${event.sender}$reference"
+        val receivedAt = Date(event.receivedAt)
+        holder.timestamp.text = "تاريخ ووقت الرسالة: ${dateFormat.format(receivedAt)} · ${timeFormat.format(receivedAt)}"
         holder.counterparty.text = event.counterparty?.let { "الطرف: $it" }.orEmpty()
         holder.counterparty.visibility = if (event.counterparty.isNullOrBlank()) View.GONE else View.VISIBLE
         holder.preview.text = event.body.replace(Regex("\\s+"), " ").trim()
@@ -68,6 +71,7 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         val direction: TextView = view.findViewById(R.id.operationDirection)
         val amount: TextView = view.findViewById(R.id.operationAmount)
         val meta: TextView = view.findViewById(R.id.operationMeta)
+        val timestamp: TextView = view.findViewById(R.id.operationTimestamp)
         val counterparty: TextView = view.findViewById(R.id.operationCounterparty)
         val preview: TextView = view.findViewById(R.id.operationPreview)
     }

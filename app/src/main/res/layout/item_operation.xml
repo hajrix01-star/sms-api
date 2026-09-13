@@ -56,6 +56,14 @@
             android:textSize="12sp" />
 
         <TextView
+            android:id="@+id/operationTimestamp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <TextView
             android:id="@+id/operationCounterparty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
