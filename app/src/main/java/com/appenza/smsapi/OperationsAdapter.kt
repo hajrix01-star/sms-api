@@ -12,7 +12,9 @@ import java.util.Date
 import java.util.Locale
 
 /** Keeps the operations page bounded and recyclable even when the local ledger grows. */
-class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
+class OperationsAdapter(
+    private val onOperationClick: (LedgerEvent) -> Unit = {},
+) : RecyclerView.Adapter<OperationsAdapter.Holder>() {
     private val items = mutableListOf<LedgerEvent>()
     private val dateFormat = DateFormat.getDateInstance(DateFormat.LONG, Locale("ar"))
     private val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT, Locale("ar"))
@@ -35,7 +37,7 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         val event = items[position]
         val cashDirection = OperationDirectionResolver.resolve(event.category)
         holder.category.text = event.category
-        holder.direction.text = operationDirection(event, cashDirection)
+        holder.direction.text = OperationDirectionResolver.label(event)
         holder.direction.setTextColor(ContextCompat.getColor(holder.itemView.context, directionColor(cashDirection)))
         holder.amount.text = event.amount?.let { "SAR ${amountFormat.format(it)}" } ?: "—"
         holder.amount.setTextColor(ContextCompat.getColor(holder.itemView.context, directionColor(cashDirection)))
@@ -47,15 +49,7 @@ class OperationsAdapter : RecyclerView.Adapter<OperationsAdapter.Holder>() {
         holder.counterparty.text = event.counterparty?.let { "الطرف: $it" }.orEmpty()
         holder.counterparty.visibility = if (event.counterparty.isNullOrBlank()) View.GONE else View.VISIBLE
         holder.preview.text = event.body.replace(Regex("\\s+"), " ").trim()
-    }
-
-    private fun operationDirection(event: LedgerEvent, cashDirection: CashDirection): String = when {
-        event.custodyType == "تمويل عهدة" -> "تغذية عهدة"
-        event.custodyType == "مشتريات عهدة" -> "مصروف بطاقة العهدة"
-        event.custodyType == "سحب نقدي عهدة" -> "نقد مع المندوب"
-        cashDirection == CashDirection.INCOMING -> "↑ داخل الحساب"
-        cashDirection == CashDirection.OUTGOING -> "↓ خارج الحساب"
-        else -> event.companyName ?: "بانتظار الربط"
+        holder.itemView.setOnClickListener { onOperationClick(event) }
     }
 
     private fun directionColor(direction: CashDirection): Int = when (direction) {

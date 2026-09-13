@@ -256,7 +256,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupOperations() {
-        operationsAdapter = OperationsAdapter()
+        operationsAdapter = OperationsAdapter(::showOperationDetails)
         findViewById<RecyclerView>(R.id.operationsRecycler).apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = operationsAdapter
@@ -278,6 +278,55 @@ class MainActivity : AppCompatActivity() {
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(value: Editable?) = renderOperations()
         })
+    }
+
+    private fun showOperationDetails(event: LedgerEvent) {
+        val sheet = BottomSheetDialog(this)
+        val content = layoutInflater.inflate(R.layout.sheet_operation_details, null)
+        val amountFormat = NumberFormat.getNumberInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        val receivedAt = Date(event.receivedAt)
+        val dateFormat = DateFormat.getDateInstance(DateFormat.LONG, Locale("ar"))
+        val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT, Locale("ar"))
+        val cashDirection = OperationDirectionResolver.resolve(event.category)
+
+        content.findViewById<TextView>(R.id.operationDetailCategory).text = event.category
+        content.findViewById<TextView>(R.id.operationDetailAmount).text =
+            event.amount?.let { "SAR ${amountFormat.format(it)}" } ?: "المبلغ غير مكتشف"
+        content.findViewById<TextView>(R.id.operationDetailDirection).apply {
+            text = OperationDirectionResolver.label(event)
+            setTextColor(
+                ContextCompat.getColor(
+                    this@MainActivity,
+                    when (cashDirection) {
+                        CashDirection.INCOMING -> R.color.primary_action
+                        CashDirection.OUTGOING -> R.color.outgoing_action
+                        CashDirection.NEUTRAL -> R.color.text_secondary
+                    },
+                ),
+            )
+        }
+        content.findViewById<TextView>(R.id.operationDetailDate).text =
+            "تاريخ ووقت الرسالة: ${dateFormat.format(receivedAt)} · ${timeFormat.format(receivedAt)}"
+        content.findViewById<TextView>(R.id.operationDetailCompany).text =
+            "الجهة: ${event.companyName ?: "غير مرتبطة بشركة"}"
+        content.findViewById<TextView>(R.id.operationDetailInstrument).text =
+            "الحساب أو البطاقة: ${event.instrument ?: "غير معروف"}"
+        content.findViewById<TextView>(R.id.operationDetailSender).text = "المرسل: ${event.sender}"
+        content.findViewById<TextView>(R.id.operationDetailCounterparty).apply {
+            text = "الطرف: ${event.counterparty}"
+            visibility = if (event.counterparty.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+        content.findViewById<TextView>(R.id.operationDetailCustody).apply {
+            text = "العهدة: ${event.custodyType}"
+            visibility = if (event.custodyType.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+        content.findViewById<TextView>(R.id.operationDetailBody).text = event.body.trim()
+        content.findViewById<Button>(R.id.operationDetailClose).setOnClickListener { sheet.dismiss() }
+        sheet.setContentView(content)
+        sheet.show()
     }
 
     private fun setupDashboard() {
