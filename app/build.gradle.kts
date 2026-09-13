@@ -11,8 +11,8 @@ android {
         applicationId = "com.appenza.smsapi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 36
-        versionName = "0.19.6-compact-period-filter"
+        versionCode = 37
+        versionName = "0.19.7-message-timestamp"
     }
 
     signingConfigs {
